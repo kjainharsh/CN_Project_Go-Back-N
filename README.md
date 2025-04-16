@@ -33,8 +33,9 @@ Go-Back-N is a type of ARQ protocol where the sender can send multiple frames be
 ### ✅ Option 2: Direct Download and Run (No Setup Needed)
 
 1. Download the ZIP file from the given Google Drive link: https://drive.google.com/file/d/1cHLpaXzXqQgOXWdSxSbnJ7u-HxD55lOx/view?usp=sharing
-2. Extract the contents to zip folder.
-3. Double-click `Harsh GOBackN.exe`  to open it in your browser and start the simulation.
+2. OR Download from the releases of this Repository.
+3. Extract the contents to zip folder.
+4. Double-click `Harsh GOBackN.exe`  to open it in your browser and start the simulation.
 
 ---
 
