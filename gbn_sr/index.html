@@ -1,0 +1,2809 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Go-back-N Protocol</title>
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" type="text/css" media="screen" href="../global/css/style.css" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+	<link rel="stylesheet" type="text/css" media="screen"
+		href="../global/css/jqui-lightness/jquery-ui-1.8.18.custom.css" />
+	<style type="text/css">
+		:root {
+			/* Light Mode Colors - Updated with new color scheme */
+			--primary-color: #2ecc71;  /* Changed from #2c3e50 to green */
+			--sidebar-width: 400px;
+			--sidebar-bg: #ecf0f1;
+			--border-color: #bdc3c7;
+			--shadow-color: rgba(0, 0, 0, 0.15);
+			--text-color: #2c3e50;
+			--header-bg: #2ecc71;  /* Changed from #3498db to green */
+			--body-bg: #ffffff;
+			--input-bg: #ffffff;
+			--input-border: #bdc3c7;
+			--button-bg: #2ecc71;  /* Changed from #3498db to green */
+			--button-text: #ffffff;
+			--button-hover-bg: #27ae60;  /* Changed from #2980b9 to darker green */
+			--tooltip-bg: #34495e;
+			--tooltip-text: #ffffff;
+			--tooltip-info-bg: #2ecc71;  /* Changed from #3498db to green */
+			--log-bg: #ffffff;
+			--log-border: #bdc3c7;
+			--log-even-row-bg: #f5f6fa;
+			--packet-default-bg: #2ecc71;  /* Changed from #3498db to green */
+			--packet-default-border: #27ae60;  /* Changed from #2980b9 to darker green */
+			--packet-default-text: #ffffff;
+			--packet-delivered-bg: #2ecc71;
+			--packet-delivered-border: #27ae60;
+			--packet-delivered-text: #ffffff;
+			--packet-confirmed-bg: #f1c40f;
+			--packet-confirmed-border: #f39c12;
+			--packet-confirmed-text: #ffffff;
+			--packet-ack-bg: #00ca6f;
+			--packet-ack-border: #009157;
+			--packet-ack-text: #ffffff;
+			--packet-nack-bg: #e67e22;
+			--packet-nack-border: #d35400;
+			--packet-nack-text: #ffffff;
+			--packet-empty-bg: #ecf0f1;
+			--packet-empty-border: #bdc3c7;
+			--packet-empty-text: #7f8c8d;
+			--window-bg: #34495e;
+			--window-border: #2c3e50;
+			--sim-bg: #ecf0f1;
+			/* Added */
+			--tab-bg: var(--sidebar-bg);
+			--tab-active-bg: var(--body-bg);
+			--tab-border: var(--border-color);
+			--tab-active-border: var(--primary-color);
+			/* Scrollbar Colors - Light Mode */
+			--scrollbar-track-bg: #f1f1f1;
+			/* Very light grey track */
+			--scrollbar-thumb-bg: #adb5bd;
+			/* Medium grey thumb */
+			--scrollbar-thumb-hover-bg: #6c757d;
+			/* Darker grey thumb hover */
+			--scrollbar-thumb-border: var(--border-color);
+			/* Use existing light border */
+		}
+
+		body.dark-mode {
+			/* Dark Mode Colors - Updated with black backgrounds */
+			--primary-color: #2ecc71;  /* Changed from #3498db to green */
+			--sidebar-bg: #000000;
+			--border-color: #34495e;
+			--shadow-color: rgba(255, 255, 255, 0.1);
+			--text-color: #ecf0f1;
+			--header-bg: #000000;
+			--body-bg: #000000;
+			--input-bg: #000000;
+			--input-border: #2c3e50;
+			--button-bg: #2ecc71;  /* Changed from #3498db to green */
+			--button-text: #ffffff;
+			--button-hover-bg: #27ae60;  /* Changed from #2980b9 to darker green */
+			--tooltip-bg: #000000;
+			--tooltip-text: #ffffff;
+			--tooltip-info-bg: #000000;
+			--log-bg: #000000;
+			--log-border: #34495e;
+			--log-even-row-bg: #000000;
+			--packet-default-bg: #2ea3cc;  /* Changed from #3498db to green */
+			--packet-default-border: #27ae60;  /* Changed from #2980b9 to darker green */
+			--packet-default-text: #ffffff;
+			--packet-delivered-bg: #2ecc71;
+			--packet-delivered-border: #27ae60;
+			--packet-delivered-text: #ffffff;
+			--packet-confirmed-bg: #f1c40f;
+			--packet-confirmed-border: #00813e;
+			--packet-confirmed-text: #ffffff;
+			--packet-ack-bg: #007d5c;
+			--packet-ack-border: #000000;
+			--packet-ack-text: #ffffff;
+			--packet-nack-bg: #e67e22;
+			--packet-nack-border: #d35400;
+			--packet-nack-text: #ffffff;
+			--packet-empty-bg: #000000;
+			--packet-empty-border: #2c3e50;
+			--packet-empty-text: #95a5a6;
+			--window-bg: #000000;
+			--window-border: #2c3e50;
+			--sim-bg: #000000;
+			/* Added */
+			--tab-bg: var(--sidebar-bg);
+			--tab-active-bg: var(--body-bg);
+			--tab-border: var(--border-color);
+			--tab-active-border: var(--primary-color);
+			/* Scrollbar Colors - Dark Mode */
+			--scrollbar-track-bg: var(--body-bg);
+			--scrollbar-thumb-bg: var(--input-border);
+			--scrollbar-thumb-hover-bg: var(--border-color);
+			--scrollbar-thumb-border: var(--input-bg);
+			--bg-color: #000000;
+			background-color: #000000;
+			color: #ffffff;
+		}
+
+		/* Force black background on all major containers in dark mode */
+		body.dark-mode #svg,
+		body.dark-mode #log,
+		body.dark-mode .tab-content,
+		body.dark-mode #sidebar,
+		body.dark-mode #main-content,
+		body.dark-mode .container,
+		body.dark-mode header,
+		body.dark-mode .simulation,
+		body.dark-mode .config,
+		body.dark-mode .form-item,
+		body.dark-mode .legend {
+			background-color: #000000 !important;
+		}
+
+		/* Ensure inputs and selects have black background in dark mode */
+		body.dark-mode input,
+		body.dark-mode select,
+		body.dark-mode .units,
+		body.dark-mode .unitdisabled {
+			background-color: #000000 !important;
+			color: #ffffff !important;
+		}
+
+		/* Ensure tooltips have black background in dark mode */
+		body.dark-mode .tooltip .tooltiptext,
+		body.dark-mode .tooltip .tooltiptext1 {
+			background-color: #000000 !important;
+			border: 1px solid #495057;
+		}
+
+		/* Update tooltip arrow color in dark mode */
+		body.dark-mode .tooltip .tooltiptext::after,
+		body.dark-mode .tooltip .tooltiptext1::after {
+			border-color: transparent #000000 transparent transparent !important;
+		}
+
+		/* Legend item for "No data received yet" */
+		.dscPkg.empty-legend {
+			background-color: var(--packet-empty-bg);
+			color: var(--packet-empty-text);
+			border: 1px solid var(--packet-empty-border);
+			/* Use a solid border for legend clarity */
+			/* Ensure default .dscPkg padding/text-align is applied */
+			padding: 10px 8px;
+			text-align: center;
+			border-radius: 3px;
+			box-sizing: border-box;
+			font-size: 12px;
+			/* Match other legend items if needed */
+		}
+
+		/* Optional: Slightly darker text for light mode if needed for contrast */
+		body:not(.dark-mode) .dscPkg.empty-legend {
+			/* Adjust if the default --packet-empty-text (#ced4da) is too light on light bg */
+			/* color: #6c757d; */
+		}
+
+		body {
+			margin: 0;
+			padding: 0;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+			display: flex;
+			flex-direction: column;
+			min-height: 100vh;
+			background-color: var(--body-bg);
+			color: var(--text-color);
+			overflow-x: hidden;
+		}
+
+		/* Header styles */
+		header {
+			background: var(--header-bg);
+			color: var(--primary-color);
+			padding: 1rem;
+			text-align: center;
+			box-shadow: 0 2px 4px var(--shadow-color);
+			position: relative;
+			z-index: 10;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+		
+
+		header h1 {
+			margin: 0;
+			flex-grow: 1;
+			text-align: center;
+		}
+
+		#theme-toggle {
+			position: absolute;
+			right: 1rem;
+			top: 50%;
+			transform: translateY(-50%);
+			background: none;
+			border: 1px solid var(--primary-color);
+			color: var(--primary-color);
+			padding: 5px 10px;
+			cursor: pointer;
+			border-radius: 4px;
+			font-size: 1rem;
+		}
+
+		body.dark-mode #theme-toggle {
+			border-color: var(--text-color);
+			color: var(--text-color);
+		}
+
+		/* Main container */
+		.container {
+			display: flex;
+			flex: 1;
+			position: relative;
+			overflow: hidden;
+		}
+
+		/* Sidebar */
+		#sidebar {
+			width: var(--sidebar-width);
+			background: var(--sidebar-bg);
+			border-right: 1px solid var(--border-color);
+			transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+			overflow-y: auto;
+			overflow-x: visible;
+			position: fixed;
+			top: 0;
+			bottom: 0;
+			left: 0;
+			z-index: 100;
+			height: 100vh;
+			box-shadow: 2px 0 5px var(--shadow-color);
+		}
+
+		#sidebar.closed {
+			transform: translateX(calc(-1 * var(--sidebar-width)));
+		}
+
+		/* Toggle button */
+		#sidebar-toggle {
+			position: fixed;
+			left: var(--sidebar-width);
+			/* top: 15px; */
+			/* Change this line */
+			top: 10px;
+			/* Adjust this value as needed (e.g., 8px, 10px, 12px) */
+			z-index: 101;
+			background: var(--primary-color);
+			color: white;
+			border: none;
+			border-radius: 0 4px 4px 0;
+			padding: 10px;
+			cursor: pointer;
+			box-shadow: 2px 0 5px var(--shadow-color);
+			transition: left 0.4s ease;
+		}
+
+		#sidebar-toggle.closed {
+			left: 2px;
+		}
+
+		/* Main content */
+		#main-content {
+			flex: 1;
+			padding: 1rem;
+			margin-left: var(--sidebar-width);
+			transition: margin-left 0.4s ease;
+			width: calc(100% - var(--sidebar-width));
+			background-color: var(--body-bg);
+		}
+
+		#main-content.expanded {
+			margin-left: 0;
+			width: 100%;
+		}
+
+		/* --- FIX for External CSS Override --- */
+		/* Apply dark mode styles to the config/legend panels */
+		body.dark-mode .config,
+		body.dark-mode .legend,
+		body.dark-mode .def {
+			background-color: var(--sidebar-bg);
+			/* Use the sidebar's dark background */
+			border-color: var(--border-color);
+			/* Use the dark mode border color */
+			color: var(--text-color);
+			/* Use the default dark mode text color */
+		}
+
+		/* Ensure headings inside these panels also use dark mode colors */
+		body.dark-mode .config h3,
+		body.dark-mode .legend h2,
+		/* Legend uses h2 */
+		body.dark-mode .def h3 {
+			/* Assuming .def might use h3 */
+			color: var(--primary-color);
+			/* Match heading color from index.html */
+			border-bottom-color: var(--border-color);
+			/* Adjust separator lines if they exist */
+		}
+
+		/* Ensure labels/subheadings inside use dark mode text color */
+		body.dark-mode .config h5,
+		body.dark-mode .config label {
+			color: var(--text-color);
+		}
+
+		/* Ensure description text inside uses dark mode text color */
+		body.dark-mode .config .description {
+			color: #adb5bd;
+			/* A slightly lighter grey for descriptions, matching legend text */
+		}
+
+		/* Ensure table headers in legend are styled for dark mode */
+		body.dark-mode .legend th {
+			background-color: var(--input-bg);
+			/* Use a dark background */
+			border-color: var(--border-color);
+			color: var(--text-color);
+		}
+
+		/* Ensure table data cells in legend use appropriate colors */
+		body.dark-mode .legend td {
+			border-color: var(--border-color);
+			color: var(--text-color);
+		}
+
+		/* --- End of FIX --- */
+		/* Tabs in sidebar */
+		.tab-container {
+			border-bottom: 1px solid var(--border-color);
+		}
+
+		.tab-buttons {
+			display: flex;
+			background: var(--tab-bg);
+			border-bottom: 1px solid var(--tab-border);
+
+		}
+
+		.tab-button {
+			flex: 1;
+			padding: 10px;
+			text-align: center;
+			background: var(--tab-bg);
+			color: var(--text-color);
+			border: none;
+			cursor: pointer;
+			font-weight: 500;
+			transition: background-color 0.2s ease, color 0.2s ease;
+		}
+
+		.tab-button.active {
+			background: var(--tab-active-bg);
+			border-bottom: 3px solid var(--tab-active-border);
+			font-weight: 600;
+			color: var(--primary-color);
+		}
+
+		.tab-content {
+			display: none;
+			padding: 0.5rem;
+		}
+
+		.tab-content.active {
+			display: block;
+		}
+
+		/* Forms and inputs */
+		.form-item {
+			margin-bottom: 1rem;
+			padding: 0.5rem;
+			border-bottom: 1px solid var(--border-color);
+		}
+
+		.form-item h3 {
+			margin-top: 0;
+			font-size: 1rem;
+			color: var(--primary-color);
+		}
+
+		.form-item h5 {
+			margin: 0.5rem 0;
+			font-size: 0.9rem;
+		}
+
+		input[type="number"],
+		input[type="button"],
+		select {
+			padding: 5px;
+			border: 1px solid var(--input-border);
+			background-color: var(--input-bg);
+			color: var(--text-color);
+			border-radius: 3px;
+			margin: 2px 0;
+			transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+		}
+
+		input[type="button"] {
+			background: var(--button-bg);
+			color: var(--button-text);
+			cursor: pointer;
+			padding: 8px 15px;
+			border: 2px solid white;
+			border-radius: 4px;
+			transition: background-color 0.3s ease, border-color 0.3s ease;
+			margin-right: 5px;
+		}
+
+		input[type="button"]:hover {
+			background: var(--button-hover-bg);
+		}
+
+		/* --- FIX for Input Field Contrast in Dark Mode --- */
+
+		/* Style ENABLED inputs within .config in dark mode */
+		body.dark-mode .config input[type=number] {
+			background-color: var(--input-bg);
+			/* Apply dark background */
+			color: var(--text-color);
+			/* Apply light text */
+			border-color: var(--input-border);
+			/* Apply dark border */
+		}
+
+		/* Style DISABLED inputs within .config in dark mode */
+		/* Overrides both external styles and the more generic dark mode disabled rule */
+		body.dark-mode .config input[type=number]:disabled {
+			background-color: #3a3f44;
+			/* Specific dark disabled background from original inline style */
+			color: #a0a6ac;
+			/* Slightly lighter grey text for better contrast on #3a3f44 */
+			border-color: #495057;
+			/* Specific dark disabled border from original inline style */
+			opacity: 0.7;
+			/* Keep the opacity effect */
+			cursor: not-allowed;
+		}
+
+		/* Also ensure the disabled unit selects have appropriate colors */
+		body.dark-mode .config .unitdisabled {
+			background-color: #3a3f44;
+			/* Match disabled input background */
+			color: #a0a6ac;
+			/* Match disabled input text */
+			border-color: #495057;
+			/* Match disabled input border */
+			border-left: none;
+			/* Keep left border removed */
+		}
+
+		/* --- End of FIX --- */
+		/* --- FIX for Legend Text Contrast in Light Mode --- */
+		/* Darken the text for the "No data" legend item in light mode */
+		body:not(.dark-mode) .dscPkg.empty-legend {
+			color: #6c757d;
+			/* A medium-dark grey for better contrast */
+			/* Optional: You could also use var(--text-color) if that looks better */
+			/* color: var(--text-color); */
+		}
+
+		/* --- End of FIX --- */
+		/* Legend */
+		.legend {
+			padding: 0.5rem;
+		}
+
+		.legend h2 {
+			margin-top: 0;
+			font-size: 1.2rem;
+			color: var(--primary-color);
+		}
+
+		.legend table {
+			width: 100%;
+			border-collapse: collapse;
+		}
+
+		.legend td {
+			padding: 5px;
+		}
+
+		/* Info text */
+		.legend p {
+			font-size: 0.8rem;
+			color: hsl(208, 7%, 46%);
+			margin: 5px 0;
+		}
+
+		/* Simulation area */
+		#svg {
+			position: relative;
+			width: 100%;
+			min-height: 418px;
+			overflow: hidden;
+			padding: 0;
+			background-color: var(--sim-bg);
+			border: 1px solid var(--border-color);
+			border-radius: 4px;
+			box-shadow: 0 2px 4px var(--shadow-color);
+		}
+
+		#root {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: auto;
+			height: 100%;
+		}
+
+		#svg>#root div,
+		#svg canvas {
+			position: absolute;
+		}
+
+		/* Lines */
+		.lineSender,
+		.lineReciever {
+			border: none;
+			height: 1px;
+			background-color: var(--border-color);
+			position: absolute;
+			width: 100%;
+		}
+
+		.lineSender {
+			top: 50px;
+		}
+
+		.lineReciever {
+			bottom: 50px;
+		}
+
+		/* Packets */
+		div.dscPkg {
+			border: 1px solid var(--border-color);
+			width: 80px;
+			height: auto;
+			text-align: center;
+			font-size: 12px;
+			padding: 10px 8px;
+			margin: 0;
+			border-radius: 3px;
+			color: var(--text-color);
+			box-sizing: border-box;
+			justify-self: center;
+			background-color: var(--input-bg);
+				}
+
+		.window {
+			border: 2px solid rgb(7, 24, 255);
+			background: rgba(25, 125, 247, 0.156);
+			z-index: 41;
+			border-radius: 2px;
+			margin-top: -1px;
+			margin-left: -2px;
+			padding-right: 2px ;
+		}
+
+		.pkg {
+			font-size: 11px;
+			writing-mode: vertical-lr;
+			transform: rotate(180deg);
+			/* background: var(--packet-default-bg); */background: #a0a0a1;
+			border: 1px solid var(--packet-default-border);
+			width: 18px;
+			height: 30px;
+			z-index: 42;
+			padding: 0;
+			margin: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			box-sizing: border-box;
+			border-radius: 	10px;
+			color: rgb(60, 56, 56);
+			font-weight: 500;
+
+			-webkit-user-select: none;
+			-khtml-user-select: none;
+			-moz-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+		}
+
+		.pkg.delivered {
+			color: var(--packet-delivered-text);
+			background: var(--packet-delivered-bg);
+			border-color: var(--packet-delivered-border);
+		}
+
+		.pkg.confirmed {
+			background: var(--packet-confirmed-bg);
+			border-color: var(--packet-confirmed-border);
+			color: var(--packet-confirmed-text);
+		}
+
+		.pkg.ack {
+			color: var(--packet-ack-text);
+			background: var(--packet-ack-bg);
+			border-color: var(--packet-ack-border);
+		}
+
+		.pkg.nack {
+			color: var(--packet-nack-text);
+			background: var(--packet-nack-bg);
+			border-color: var(--packet-nack-border);
+		}
+
+		.pkg.empty {
+			font-size: 11px;
+			color: var(--packet-empty-text);
+			background: var(--packet-empty-bg);
+			border: 1px dashed var(--packet-empty-border);
+		}
+
+		#svg canvas.window-timer {
+			height: 40px;
+			width: 40px;
+			z-index: 45;
+			margin-left: -20px;
+		}
+
+		/* Tooltip styles */
+		.tooltip {
+			position: relative;
+			display: inline-block;
+			cursor: help;
+			margin-left: 5px;
+			width: 16px;
+			height: 16px;
+			line-height: 16px;
+			text-align: center;
+			background: var(--tooltip-info-bg);
+			color: var(--text-color);
+			border-radius: 50%;
+			font-size: 12px;
+		}
+
+		.tooltip .tooltiptext,
+		.tooltip .tooltiptext1 {
+			visibility: hidden;
+			max-width: 200px;
+			width: max-content;
+			background-color: var(--tooltip-bg);
+			color: var(--tooltip-text);
+			text-align: left;
+			border-radius: 6px;
+			padding: 8px 12px;
+			position: absolute;
+			z-index: 1000;
+			left: 26px;
+			top: 50%;
+			transform: translateY(-50%);
+			margin-left: 0;
+			opacity: 0;
+			transition: opacity 0.3s;
+			font-size: 12px;
+			font-weight: normal;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+			pointer-events: none;
+			word-wrap: break-word;
+		}
+
+		.tooltip .tooltiptext::after,
+		.tooltip .tooltiptext1::after {
+			content: "";
+			position: absolute;
+			top: 50%;
+			right: 100%;
+			margin-top: -5px;
+			border-width: 5px;
+			border-style: solid;
+			border-color: transparent var(--tooltip-bg) transparent transparent;
+		}
+
+		body.dark-mode .tooltip .tooltiptext::after,
+		body.dark-mode .tooltip .tooltiptext1::after {
+			border-color: transparent var(--tooltip-bg) transparent transparent;
+		}
+
+		.tooltip:hover .tooltiptext,
+		.tooltip:hover .tooltiptext1 {
+			visibility: visible;
+			opacity: 1;
+		}
+
+		#sidebar .form-item:nth-last-child(-n+3) .tooltip .tooltiptext,
+		#sidebar .form-item:nth-last-child(-n+3) .tooltip .tooltiptext1 {
+			bottom: 0;
+			top: auto;
+			transform: none;
+		}
+
+		#sidebar .form-item:nth-last-child(-n+3) .tooltip .tooltiptext::after,
+		#sidebar .form-item:nth-last-child(-n+3) .tooltip .tooltiptext1::after {
+			top: 15px;
+		}
+
+		/* Log styles */
+		#log {
+			position: relative;
+			overflow: auto;
+			width: 100%;
+			height: 230px;
+			display: block;
+			border: 1px solid var(--log-border);
+			/* Use variable */
+			border-radius: 4px;
+			padding: 10px;
+			margin-top: 10px;
+			background: var(--log-bg);
+			/* Use variable */
+			max-width: 100%;
+			box-sizing: border-box;
+			transition: background-color 0.3s ease, border-color 0.3s ease;
+			/* Add transitions */
+		}
+
+		/* Ensure log background in dark mode */
+		body.dark-mode #log {
+			background-color: var(--log-bg) !important;
+			color: var(--text-color) !important;
+			border-color: var(--log-border) !important;
+		}
+
+		#myLog {
+			white-space: pre-wrap;
+			word-wrap: break-word;
+			margin: 0;
+			font-family: monospace;
+			font-size: 14px;
+			line-height: 1.5;
+			max-width: 100%;
+			overflow-x: hidden;
+			color: var(--text-color);
+			/* Ensure log text color changes */
+			transition: color 0.3s ease;
+			/* Add transitions */
+		}
+
+		/* Ensure log text color in dark mode */
+		body.dark-mode #myLog {
+			color: var(--text-color) !important;
+		}
+
+		/* Add zebra striping to log entries (Increased Specificity) */
+		#log #myLog>div:nth-child(even) {
+			background-color: var(--log-even-row-bg);
+			/* Use variable */
+			transition: background-color 0.3s ease;
+			/* Add transitions */
+		}
+
+		/* Fix dark mode for all inline elements */
+		body.dark-mode div.dscPkg,
+		body.dark-mode .legend h2,
+		body.dark-mode .tooltip,
+		body.dark-mode .form-item h3,
+		body.dark-mode .form-item h5 {
+			color: var(--text-color) ;
+		}
+
+		/* Force background colors for elements that might have inline styles */
+		body.dark-mode #svg,
+		body.dark-mode .tab-content,
+		body.dark-mode .form-item {
+			background-color: transparent !important;
+		}
+
+		/* Ensure legend items get correct styling */
+		body.dark-mode .legend table td div {
+			border-color: var(--border-color) !important;
+		}
+
+		body.dark-mode .legend p {
+			color: #adb5bd !important;
+			/* Lighter grey for dark mode */
+		}
+
+		/* Responsive adjustments */
+		@media (max-width: 768px) {
+			:root {
+				--sidebar-width: 320px;
+			}
+
+			header h1 {
+				font-size: 1.5rem;
+			}
+
+			.tooltip .tooltiptext,
+			.tooltip .tooltiptext1 {
+				width: 180px;
+				max-width: 180px;
+				font-size: 11px;
+			}
+		}
+
+		@media (max-width: 576px) {
+			:root {
+				--sidebar-width: 100%;
+			}
+
+			#sidebar {
+				width: 100%;
+			}
+
+			#sidebar-toggle.closed {
+				left: 10px;
+			}
+
+			#main-content.expanded {
+				margin-top: 50px;
+			}
+		}
+
+		/* Make main section headings bolder and slightly larger */
+		.form-item>h3>label {
+			font-weight: 600;
+			font-size: 1.05rem;
+		}
+
+		.form-item>h3 {
+			margin-bottom: 1rem;
+		}
+
+		/* Style disabled elements */
+		input:disabled,
+		select:disabled,
+		input[type="button"]:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+		}
+
+		body.dark-mode select.unitdisabled {
+			background-color: var(--input-bg);
+			color: var(--text-color);
+			border-color: var(--input-border);
+		}
+
+		/* Specific dark mode overrides for inputs/selects */
+		body.dark-mode input[type="number"],
+		body.dark-mode select {
+			background-color: var(--input-bg);
+			color: var(--text-color);
+			border-color: var(--input-border);
+		}
+
+		/* Dark mode specific disabled styles */
+		body.dark-mode input:disabled,
+		body.dark-mode select:disabled {
+			background-color: #3a3f44;
+			color: #868e96;
+			border-color: #495057;
+			opacity: 0.7;
+		}
+
+		/* Update background colors for specific elements */
+		body.dark-mode #svg {
+			background-color: #000000;
+		}
+
+		body.dark-mode #log {
+			background-color: #000000 !important;
+		}
+
+		body.dark-mode .tab-content {
+			background-color: #000000;
+		}
+
+		body.dark-mode #sidebar {
+			background-color: #000000;
+		}
+
+		body.dark-mode #main-content {
+			background-color: #000000;
+		}
+	</style>
+	<script type="text/javascript" src="../global/js/jquery-1.7.1.min.js"></script>
+	<script type="text/javascript" src="../global/js/jquery.pause.min.js"></script>
+	<script type="text/javascript" src="../global/js/modernizr.js"></script>
+	<script type="text/javascript" src="../global/js/global.js"></script>
+	<script type="text/javascript" src="../global/js/jquery-ui-1.8.18.custom.min.js"></script>
+	<script type="text/javascript">
+		/* globals */
+		var running = false;
+		var display;
+		var contr;
+		var sender;
+		var receiver;
+		var typewriter = true;
+		var endToEndDelay;
+		var TimeoutMin;
+		var capacity;
+		var length;
+		var propagation;
+		var dataSize;
+		var unitSize;
+		var ackSize;
+		var ackTT;
+		var paper;
+		var ctotal = 0;
+		var autostop = 1;
+		var PDspeedFactor = 0;
+		var unitc = 0;
+		var numberUI;
+		var start;
+		var sizecheck;
+		var sizecheck1;
+		var totaltimef;
+		var NACKFlag = false;
+		var autoscale = false;
+		var overall_time;
+		var unlock = false;
+
+		const reloadtButton = document.querySelector("#reload");
+		// Reload everything:
+		function reload() {
+			reload = location.reload();
+		}
+
+
+		function logger() {
+			var x = document.getElementById("log");
+			if (x.style.display === "none") {
+				x.style.display = "block";
+			} else {
+				x.style.display = "none";
+			}
+		}
+
+		window.console = {
+			log: function (str) {
+				var node = document.createElement("div");
+				node.appendChild(document.createTextNode(str));
+				document.getElementById("myLog").appendChild(node);
+				// Auto-scroll to the bottom of the log window
+				var logContainer = document.getElementById("log");
+				logContainer.scrollTop = logContainer.scrollHeight;
+			}
+		}
+
+		function speedWarning() {
+
+			if (contr.timeBetweenPkgs > 1000000 || contr.timeBetweenPkgs < 0.000001 || endToEndDelay > 1000000 || endToEndDelay < 0.000001 || ackTT > 1000000 || ackTT < 0.000001)
+				HideSpeed(true);
+			else
+				HideSpeed(false);
+
+		}
+
+		function convertRange(value, r1, r2) {
+			return (value - r1[0]) * (r2[1] - r2[0]) / (r1[1] - r1[0]) + r2[0];
+		}
+
+		function timedCount() {
+			start = Date.now();
+		}
+
+		function HideSpeed(hide) {
+			var x = document.getElementById("speedfault");
+			var y = document.getElementById("speedwarning");
+			if (hide) {
+				x.style.display = "none";
+				y.style.display = "block";
+			} else {
+				x.style.display = "block";
+				y.style.display = "none";
+			}
+		}
+
+
+		$(document).ready(function () {
+			checkFeatures({
+				inlinesvg: false,
+				canvas: true
+			});
+
+			rangeInputCompability();
+		});
+
+		function Controller() {
+
+			this.resetConfig = function () {
+				this.SetDefaultC(1, 1000);
+				this.SetDefaultL(1, 1000);
+				this.SetDefaultP(200000, 1000);
+				this.SetDefaultD(10, 1000);
+				this.SetDefaultU(500, 1);
+				this.SetDefaultA(20, 1);
+				display.setNsender(5, sender.base);
+				sender.N = 5;
+				document.getElementById('receiverN').value = 1;
+				display.setNreceiver(1, receiver.base);
+				receiver.N = 1;
+				sender.timeout = 40;
+				document.getElementById('senderN').value = 5;
+				document.getElementById('timeout').value = 60;
+				document.getElementById('timeout').min = TimeoutMin;
+				document.getElementById('TotalTime').value = "";
+				document.getElementById('unitTimeout').value = 1;
+				initAnimation(contr.getMethod());
+
+			}
+
+			this.getMethod = function () {
+				var e = 'gbn';
+				return e;
+				//return $('input[name=method]:checked').val();
+			}
+
+			this.setMethod = function () {
+				//	console.log('switch method to '+this.getMethod());
+				initAnimation(this.getMethod());
+				this.resetConfig()
+			}
+
+			this.getSenderN = function () {
+				return parseInt(document.getElementById('senderN').value);
+			}
+
+			this.getReceiverN = function () {
+				return parseInt(document.getElementById('receiverN').value);
+			}
+
+			this.setSenderN = function () {
+				var n = this.getSenderN();
+				display.setNsender(n, sender.base);
+				sender.N = n;
+			}
+
+			this.setReceiverN = function () {
+				var n = this.getReceiverN();
+				display.setNreceiver(n, receiver.base);
+				receiver.N = n;
+			}
+
+			this.updateEndToEndDelay = function () {
+				endToEndDelay = (length / propagation) * 1000;
+				TimeoutMin = (2 * endToEndDelay) + ackTT;
+				var PPD;
+				var TM;
+				speedWarning();
+				if (endToEndDelay >= 1000) {
+					PPD = endToEndDelay / 1000;
+					document.getElementById('unitPD').value = 1;
+				}
+				if (endToEndDelay >= 1 && endToEndDelay < 1000) {
+					PPD = endToEndDelay;
+					document.getElementById('unitPD').value = 1000;
+				}
+				if (endToEndDelay >= 0 && endToEndDelay < 1) {
+					PPD = endToEndDelay * 1000;
+					document.getElementById('unitPD').value = 1000000;
+				}
+				if (PPD % parseInt(PPD) != 0) {
+					PPD = Number.parseFloat(PPD).toFixed(4);
+				}
+				document.getElementById('endToEndDelay2').value = PPD;
+
+				if (TimeoutMin >= 1000) {
+					TM = TimeoutMin / 1000;
+					document.getElementById('unitMT').value = 1;
+				}
+				if (TimeoutMin >= 1 && TimeoutMin < 1000) {
+					TM = TimeoutMin;
+					document.getElementById('unitMT').value = 1000;
+				}
+				if (TimeoutMin >= 0 && TimeoutMin < 1) {
+					TM = TimeoutMin * 1000;
+					document.getElementById('unitMT').value = 1000000;
+				}
+				if (TM % parseInt(TM) != 0) {
+					TM = Number.parseFloat(TM).toFixed(4);
+				}
+				document.getElementById('TimeoutMin').value = TM;
+				document.getElementById('timeout').min = TimeoutMin;
+			}
+			
+			this.updateNumberUI = function () {
+				numberUI = Math.floor(dataSize / unitSize);
+				if (dataSize % unitSize > 0)
+					numberUI += 1;
+				document.getElementById('NumberUI').value = numberUI;
+			}
+
+			this.updateAckTT = function () {
+				ackTT = (ackSize / capacity) * 1000;
+				TimeoutMin = (2 * endToEndDelay) + ackTT;
+				var ATT;
+				var TM;
+				speedWarning();
+				if (ackTT >= 1000) {
+					ATT = ackTT / 1000;
+					document.getElementById('unitAT').value = 1;
+				}
+				if (ackTT >= 1 && ackTT < 1000) {
+					ATT = ackTT;
+					document.getElementById('unitAT').value = 1000;
+				}
+				if (ackTT >= 0 && ackTT < 1) {
+					ATT = ackTT * 1000;
+					document.getElementById('unitAT').value = 1000000;
+				}
+				if (ATT % parseInt(ATT) != 0) {
+					ATT = Number.parseFloat(ATT).toFixed(4);
+				}
+				document.getElementById('AckTT').value = ATT;
+
+				if (TimeoutMin >= 1000) {
+					TM = TimeoutMin / 1000;
+					document.getElementById('unitMT').value = 1;
+				}
+				if (TimeoutMin >= 1 && TimeoutMin < 1000) {
+					TM = TimeoutMin;
+					document.getElementById('unitMT').value = 1000;
+				}
+				if (TimeoutMin >= 0 && TimeoutMin < 1) {
+					TM = TimeoutMin * 1000;
+					document.getElementById('unitMT').value = 1000000;
+				}
+				if (TM % parseInt(TM) != 0) {
+					TM = Number.parseFloat(TM).toFixed(4);
+				}
+				document.getElementById('TimeoutMin').value = TM;
+				document.getElementById('timeout').min = TimeoutMin;
+			}
+
+			this.autoSpeedControl = function () {
+				autoscale = document.getElementById('autospeed').checked;
+				if (autoscale) {
+					document.getElementById('PDspeed').disabled = false;
+				}
+				else {
+					document.getElementById('PDspeed').disabled = true;
+				}
+			}
+
+			this.getTimeout = function () {
+				return parseFloat(document.getElementById('timeout').value);
+			}
+
+			this.setTimeout = function () {
+				sender.timeout = this.getTimeout();  // Use timeout value directly in milliseconds
+			}
+
+			this.getCapacity = function () {
+				return parseFloat(document.getElementById('Capacity').value);
+			}
+
+			this.setCapacity = function () {
+				capacity = this.getCapacity() * parseInt(document.getElementById('unitc').value);
+				this.updatePkgPerMin();
+				this.updateAckTT();
+			}
+
+			this.SetDefaultC = function (value, u) {
+				document.getElementById('Capacity').value = value;
+				document.getElementById('unitc').value = u;
+				this.setCapacity();
+			}
+
+			this.getLength = function () {
+				return parseFloat(document.getElementById('Length').value);
+			}
+
+			this.setLength = function () {
+				length = this.getLength() * parseInt(document.getElementById('unitl').value);
+				this.updateEndToEndDelay();
+			}
+
+			this.SetDefaultL = function (value, u) {
+				document.getElementById('Length').value = value;
+				document.getElementById('unitl').value = u;
+				this.setLength();
+			}
+
+			this.getPropagation = function () {
+				return parseFloat(document.getElementById('Propagation').value);
+			}
+
+			this.setPropagation = function () {
+				propagation = this.getPropagation() * parseInt(document.getElementById('unitp').value);
+				this.updateEndToEndDelay();
+			}
+
+			this.SetDefaultP = function (value, u) {
+				document.getElementById('Propagation').value = value;
+				document.getElementById('unitp').value = u;
+				this.setPropagation();
+			}
+
+			this.getDataSize = function () {
+				return parseFloat(document.getElementById('DataSize').value);
+			}
+
+			this.setDataSize = function () {
+				dataSize = (this.getDataSize() * parseInt(document.getElementById('unitd').value)) / 2;  // Take half of the input value
+				this.updateNumberUI()
+				initAnimation(contr.getMethod());
+			}
+
+			this.SetDefaultD = function (value, u) {
+				document.getElementById('DataSize').value = value;
+				document.getElementById('unitd').value = u;
+				this.setDataSize();
+			}
+
+			this.getUnitSize = function () {
+				return parseInt(document.getElementById('UnitSize').value);
+			}
+
+			this.setUnitSize = function () {
+				unitSize = this.getUnitSize() * parseInt(document.getElementById('unitu').value);
+				this.updateNumberUI();
+				this.updatePkgPerMin();
+				initAnimation(contr.getMethod());
+			}
+
+			this.SetDefaultU = function (value, u) {
+				document.getElementById('UnitSize').value = value;
+				document.getElementById('unitu').value = u;
+				this.setUnitSize();
+			}
+
+			this.getAckSize = function () {
+				return parseInt(document.getElementById('AckSize').value);
+			}
+
+			this.setAckSize = function () {
+				ackSize = this.getAckSize() * parseInt(document.getElementById('unita').value);
+				this.updateAckTT();
+				this.updateEndToEndDelay();
+				initAnimation(contr.getMethod());
+			}
+
+			this.SetDefaultA = function (value, u) {
+				document.getElementById('AckSize').value = value;
+				document.getElementById('unita').value = u;
+				this.setAckSize();
+			}
+
+
+			this.getPDsimulationSpeed = function () {
+				var e = document.getElementById('PDspeed');
+				return parseInt(e.value);
+			}
+
+			this.setPDsimulationSpeed = function () {
+				PDspeedFactor = this.getPDsimulationSpeed();
+			}
+
+			this.speedscale = function () {
+
+				if (autoscale) {
+					if (this.timeBetweenPkgs >= 0.000001 && this.timeBetweenPkgs <= 1000000 && endToEndDelay >= 0.000001 && endToEndDelay <= 1000000) {
+						mintx = 2 * endToEndDelay + ackTT;
+						if (sender.N * this.timeBetweenPkgs > 2 * endToEndDelay + ackTT) {
+							sizecheck = 1;
+							totaltimef1 = (this.timeBetweenPkgs * numberUI) + ackTT + 2 * endToEndDelay;
+						}
+						else {
+							sizecheck = 2;
+							totaltimef1 = (Math.floor(numberUI / sender.N)) * ((sender.N * this.timeBetweenPkgs) + ackTT + 2 * endToEndDelay) + (numberUI % sender.N) * this.timeBetweenPkgs + ackTT + 2 * endToEndDelay;
+						}
+						ackTT = convertRange(ackTT, [0.000001, 1000000], [1000 + PDspeedFactor, 5000 + PDspeedFactor]);
+						this.timeBetweenPkgs = convertRange(this.timeBetweenPkgs, [0.000001, 1000000], [1000 + PDspeedFactor, 5000 + PDspeedFactor]);
+						endToEndDelay = convertRange(endToEndDelay, [0.000001, 1000000], [1000 + PDspeedFactor, 5000 + PDspeedFactor]);
+						sender.timeout *= ((2 * endToEndDelay + ackTT) / mintx);
+						if (sizecheck == 1)
+							totaltimef = totaltimef1 / ((this.timeBetweenPkgs * numberUI) + ackTT + 2 * endToEndDelay);
+						if (sizecheck == 2)
+							totaltimef = totaltimef1 / ((Math.floor(numberUI / sender.N)) * ((sender.N * this.timeBetweenPkgs) + ackTT + 2 * endToEndDelay) + (numberUI % sender.N) * this.timeBetweenPkgs + ackTT + 2 * endToEndDelay);
+					}
+					else {
+
+					}
+
+				}
+				else {
+					sizecheck = 0;
+					sizecheck = 0;
+					ackTT = (ackSize / capacity) * 1000;
+					this.timeBetweenPkgs = (unitSize / capacity) * 1000;
+					endToEndDelay = (length / propagation) * 1000;
+					sender.timeout = 60;
+				}
+			}
+
+
+			this.isPaused = false;
+			this.pause = function () {
+				if (this.isPaused === false) {
+					if (this.running)
+						window.clearInterval(this.interval);
+
+					$('.pkg').pause();
+					$.each(runningTimers, function (index, element) {
+						element.pause();
+					});
+					$('.pkg').each(function () {
+						var t = $(this).children('canvas').data('timer');
+						if (typeof t != 'undefined')
+							t.pause();
+					});
+					if (typeof display.windowTimer != 'undefined' && typeof display.windowTimer.data('timer') != 'undefined')
+						display.windowTimer.data('timer').pause();
+
+					this.isPaused = true;
+				}
+				else {
+					this.setPkgPerMin();
+					this.isPaused = false;
+
+					$('.pkg').resume();
+					$.each(runningTimers, function (index, element) {
+						element.start();
+					});
+					$('.pkg').each(function () {
+						var t = $(this).children('canvas').data('timer');
+						if (typeof t != 'undefined')
+							t.resume();
+					});
+					if (typeof display.windowTimer != 'undefined' && typeof display.windowTimer.data('timer') != 'undefined')
+						display.windowTimer.data('timer').resume();
+				}
+				document.getElementById('pause').value = (this.isPaused ? 'resume' : 'pause');
+			}
+
+			this.updatePkgPerMin = function () {
+				this.timeBetweenPkgs = (unitSize / capacity) * 1000;
+				speedWarning();
+				var TTT;
+				if (this.timeBetweenPkgs >= 1000) {
+					TTT = this.timeBetweenPkgs / 1000;
+					document.getElementById('unitTT').value = 1;
+				}
+				if (this.timeBetweenPkgs >= 1 && this.timeBetweenPkgs < 1000) {
+					TTT = this.timeBetweenPkgs;
+					document.getElementById('unitTT').value = 1000;
+				}
+				if (this.timeBetweenPkgs >= 0 && this.timeBetweenPkgs < 1) {
+					TTT = this.timeBetweenPkgs * 1000;
+					document.getElementById('unitTT').value = 1000000;
+				}
+				if (TTT % parseInt(TTT) != 0) {
+					TTT = Number.parseFloat(TTT).toFixed(4);
+				}
+				document.getElementById('TransmissionTime').value = TTT;
+
+			}
+
+			this.running = false;
+			this.interval;
+			this.timeBetweenPkgs = (unitSize / capacity) * 1000;
+			this.emit = function () {
+				sender.send(1);
+			}
+
+			this.startStop = function () {
+				if (this.running) {
+					// Complete stop of all animations and timers
+					this.completeStop();
+				} else { // start
+					if (autostop == 1) {
+						autostop = 0;
+						sizecheck = 0;
+						sizecheck1 = 0;
+						document.getElementById('TotalTime').value = "";
+						initAnimation(contr.getMethod());
+						contr.setCapacity();
+						contr.setLength();
+						contr.setPropagation();
+						contr.setDataSize();
+						contr.setUnitSize();
+						contr.setAckSize();
+						contr.setTimeout();
+						contr.speedscale();
+					}
+					overall_time = (numberUI * (unitSize / capacity)) + (ackSize / capacity) + (2 * (length / propagation));
+					console.log("Total time without error is " + overall_time + " s");
+					document.getElementById('receiverN').disabled = true;
+					document.getElementById('senderN').disabled = true;
+					document.getElementById('autospeed').disabled = true;
+					document.getElementById('PDspeed').disabled = true;
+					timedCount();
+					contr.speedscale();
+					sender.send(1);
+					window.clearInterval(this.interval);
+					this.interval = window.setInterval('sender.send(1)', this.timeBetweenPkgs);
+					disableFormItems(true);
+					document.getElementById('start').value = 'Stop';
+				}
+				this.running = !this.running;
+			}
+
+			// Add new complete stop function
+			this.completeStop = function() {
+				// Stop the main interval
+				window.clearInterval(this.interval);
+				
+				// Stop all packet timers
+				for (var i = 1; i <= numberUI; i++) {
+					if (sender.timers[i]) {
+						sender.timers[i].stop();
+						display.stopPkgTimer(i);
+					}
+				}
+				
+				// Stop window timer
+				if (display.windowTimer) {
+					display.stopWindowTimer();
+				}
+				
+				// Stop all running animations
+				$('.pkg').stop(true, true);
+				$('.window').stop(true, true);
+				
+				// Clear any remaining timers
+				for (var t in runningTimers) {
+					runningTimers[t].stop();
+				}
+				
+				// Reset the simulation state
+				contr.speedscale();
+				
+				// Re-enable controls
+				document.getElementById('senderN').disabled = false;
+				document.getElementById('autospeed').disabled = false;
+				if (document.getElementById('autospeed').checked == true) {
+					document.getElementById('PDspeed').disabled = false;
+				}
+				
+				// Update button text
+				document.getElementById('start').value = 'Start';
+				
+				// Reset running state
+				this.running = false;
+				
+				// Clear any remaining animations
+				$('.pkg').each(function() {
+					var t = $(this).children('canvas').data('timer');
+					if (typeof t != 'undefined') {
+						t.stop();
+					}
+				});
+				
+				// Reset the display
+				if (display) {
+					display.packetsAlive = 0;
+					display.alive();
+				}
+			}
+
+			this.allPacketsReceived = function () {
+
+				var CTT;
+				ctotal1 = (Date.now() - start) * totaltimef;
+
+				if (ctotal1 >= 1000) {
+					CTT = ctotal1 / 1000;
+					document.getElementById('unitTotal').value = 1;
+				}
+				if (ctotal1 >= 1 && ctotal1 < 1000) {
+					CTT = ctotal1;
+					document.getElementById('unitTotal').value = 1000;
+				}
+				if (ctotal1 >= 0 && ctotal1 < 1) {
+					CTT = ctotal1 * 1000;
+					document.getElementById('unitTotal').value = 1000000;
+				}
+				if (CTT % parseInt(CTT) != 0) {
+					CTT = Number.parseFloat(CTT).toFixed(6);
+				}
+				document.getElementById('TotalTime').value = CTT;
+				ctotal = 0;
+				if (this.running)
+					return;
+
+				disableFormItems(false);
+			}
+		}
+
+
+		/**
+		 * a Packet
+		 * @param seqnum the sequence number of the packet
+		 */
+		function Packet(seqnum, data) {
+			this.seqnum = seqnum;
+			this.data = data;
+			this.timer = null;
+
+			this.send = function (dst, timeout) {
+				var self = this;
+				this.timer = new Timer(function () {
+					dst.receive(self);
+				}, (dst == sender ? timeout : timeout));
+			}
+			this.received = function () {
+				this.timer.stop();
+			}
+			this.kill = function () {
+				this.timer.stop();
+			}
+		}
+
+		/**
+		 * this sender can send with the go back n protocol
+		 */
+		function SenderGBN(N) {
+			this.partner; // the end point the packets go to
+			this.base = 1;
+			this.nextseqnum = 1;
+			this.N = N;
+			this.pkt = new Array();
+			this.timeout = 60; // time until the timeout is fired
+			this.timers = new Array();	// an array of timers one for each packet
+			this.timerscheck = new Array();
+
+
+
+			// this method is called when a timeout occurs
+			this.timeoutHandler = function (seqnum) {
+				console.log("Timeout of packet " + (seqnum - 1));
+				this.timerscheck.push(seqnum);
+				unlock = true;
+			}
+
+
+			// sends a new packet to the partner
+			this.send = function send(data) {
+				if (this.nextseqnum < this.base + this.N || unlock) {
+					if (this.nextseqnum <= numberUI || unlock) {
+						if (unlock) {
+							console.log("Send packet " + (this.timerscheck[0] - 1));
+							this.pkt[this.timerscheck[0]].send(this.partner, endToEndDelay + contr.timeBetweenPkgs);
+							display.send(true, this.pkt[this.timerscheck[0]]);
+							var self = this;
+							var seqnum = this.timerscheck[0];
+							this.timers[seqnum] = new Timer(
+								function () {
+									self.timeoutHandler(seqnum);
+
+								}, this.timeout + contr.timeBetweenPkgs
+							);
+							display.startPkgTimer(seqnum, this.timeout);
+							this.timerscheck.shift();
+							if (this.timerscheck.length == 0) {
+								unlock = false;
+							}
+						} else {
+							this.pkt[this.nextseqnum] = new Packet(this.nextseqnum, data);
+							this.pkt[this.nextseqnum].confirmed = false;
+							for (i = 1; i < this.base; i++) {
+								// stop timer
+								this.timers[i].stop();
+								display.stopPkgTimer(i);
+							}
+							console.log("Send packet " + (this.nextseqnum - 1));
+							this.pkt[this.nextseqnum].send(this.partner, endToEndDelay + contr.timeBetweenPkgs);
+							display.send(true, this.pkt[this.nextseqnum]);
+
+							// start timer for every packet
+							var self = this;
+							var seqnum = self.nextseqnum;
+							this.timers[this.nextseqnum] = new Timer(
+								function () {
+									self.timeoutHandler(seqnum);
+
+								}, this.timeout + contr.timeBetweenPkgs
+							);
+							display.startPkgTimer(this.nextseqnum, this.timeout);
+							this.nextseqnum++;
+							return true;
+						}
+					}
+					else if (this.base == this.nextseqnum) {
+						autostop = 1;
+						this.nextseqnum = 1;
+						contr.startStop();	
+					}
+				}
+				else {
+					//	console.log("refuse packet "+ this.nextseqnum-1);
+					return false;
+				}
+			}
+
+			// receive an Ack
+			this.receive = function (ack) {
+				var n = ack.seqnum;
+				for (i = 1; i < this.base; i++) {
+					// stop timer
+					this.timers[i].stop();
+					display.stopPkgTimer(i);
+				}
+				if (ack.data == 'NACK') {	// handles NACKs that is retransmitting the packet and reseting its timer
+					console.log("NACK of packet " + (ack.seqnum - 1) + " received");
+					for (i = this.base; i < this.base + this.N && this.timers[i] != 'undefined'; i++) {
+						if (this.timers[i] == undefined) {
+							break;
+						}
+						// stop timer
+						this.timers[i].stop();
+						display.stopPkgTimer(i);
+					}
+					this.timerscheck = new Array();
+					this.nextseqnum = this.base;
+					unlock = false;
+				} else if (n >= this.base) {	// handles ACKs that is when receives a cumulative ACK, stops past timers and moves the window
+					console.log("ACK of packet " + (ack.seqnum - 1) + " received");
+					if (n > this.base || this.timerscheck.length != 0) {
+						var spli = this.timerscheck.indexOf(n);
+						if (spli != -1) {
+							spli++;
+							this.timerscheck.splice(0, spli);
+							unlock = false;
+						}
+					}
+					for (i = this.base; i <= n; i++) {
+
+						// stop timer
+						this.timers[i].stop();
+						display.stopPkgTimer(i);
+
+						// mark packet as confirmed
+						this.pkt[i].confirmed = true;
+						display.confirmSender(i);
+					}
+					display.setSenderBase(n + 1 - this.base, n + 1);	// moves the window to last ACK received
+					this.base = n + 1;
+				}
+			}
+		}
+
+		function ReceiverGBN() {
+			this.partner; // the end point the packets come from
+			this.expectedseqnum = 1;
+			this.sndpkt = new Packet(0, 'ACK');
+
+			// receive a packet
+			this.receive = function (packet) {
+				if (packet.seqnum == this.expectedseqnum) {	// if the packet is what expected it sends back the ack
+					console.log("Packet " + (packet.seqnum - 1) + " received: send ack");
+					this.sndpkt = new Packet(this.expectedseqnum, 'ACK');
+					display.confirmReceiver(this.sndpkt.seqnum);
+					display.deliverPkg(this.sndpkt.seqnum);
+					NACKFlag = false;
+					this.expectedseqnum++;
+					this.sndpkt.send(this.partner, endToEndDelay + ackTT);
+					display.send(false, this.sndpkt);
+					display.setReceiverBase(1, this.expectedseqnum);
+				}
+				else {
+					console.log("Packet " + (packet.seqnum - 1) + " received is UNEXPECTED: send the first time NACK then for the next times old ACK");
+
+					if (packet.seqnum > this.expectedseqnum && NACKFlag == false) {	// cheks if NACK has been sent before
+						NACKFlag = true;
+						this.sndpkt = new Packet(this.expectedseqnum, 'NACK');
+						this.sndpkt.send(this.partner, endToEndDelay + ackTT);
+						display.send(false, this.sndpkt);
+					}
+					else if (this.expectedseqnum != 1) {		//Sends the old ACK for each out of sequence packet
+						this.sndpkt = new Packet(this.expectedseqnum - 1, 'ACK');
+						this.sndpkt.send(this.partner, endToEndDelay + ackTT);
+						display.send(false, this.sndpkt);
+					}
+				}
+			}
+		}
+
+		function init() {
+			contr = new Controller();
+			contr.SetDefaultC(1, 1000);
+			contr.SetDefaultL(1, 1000);
+			contr.SetDefaultP(200000, 1000);
+			contr.SetDefaultD(10, 1000);
+			contr.SetDefaultU(500, 1);
+			contr.SetDefaultA(20, 1);
+			display.setNsender(5, sender.base);
+			sender.N = 5;
+			document.getElementById('receiverN').value = 1;
+			display.setNreceiver(1, receiver.base);
+			receiver.N = 1;
+			sender.timeout = 40;
+			document.getElementById('senderN').value = 5;
+			document.getElementById('timeout').value = 60;
+			document.getElementById('timeout').min = TimeoutMin;
+			document.getElementById('TotalTime').value = "";
+			document.getElementById('autospeed').checked = true;
+			document.getElementById('PDspeed').value = 0;
+			document.getElementById("speedwarning").style.display = "none";
+			document.getElementById('PDspeed').disabled = false;
+			autoscale = true;
+			PDspeedFactor = 0;
+			document.getElementById('unitTimeout').value = 1;
+			initAnimation(contr.getMethod());
+
+			// Setup sidebar toggle functionality
+			const sidebarToggle = document.getElementById('sidebar-toggle');
+			const sidebar = document.getElementById('sidebar');
+			const mainContent = document.getElementById('main-content');
+			const headerHeading = document.querySelector('header .headingName');
+
+			sidebarToggle.addEventListener('click', function () {
+				sidebar.classList.toggle('closed');
+				mainContent.classList.toggle('expanded');
+				sidebarToggle.classList.toggle('closed');
+				sidebarToggle.textContent = sidebar.classList.contains('closed') ? '☰' : '×';
+				
+				if (sidebar.classList.contains('closed')) {
+					headerHeading.style.marginLeft = '0px';
+				} else {
+					headerHeading.style.marginLeft="400px";
+				}
+			});
+
+			// Setup tab functionality
+			const tabButtons = document.querySelectorAll('.tab-button');
+			const tabContents = document.querySelectorAll('.tab-content');
+
+			tabButtons.forEach(button => {
+				button.addEventListener('click', () => {
+					tabButtons.forEach(btn => btn.classList.remove('active'));
+					tabContents.forEach(content => content.classList.remove('active'));
+					button.classList.add('active');
+					const tabId = button.getAttribute('data-tab');
+					document.getElementById(tabId).classList.add('active');
+				});
+			});
+
+			// Apply dark mode by default
+			document.body.classList.add('dark-mode');
+		}
+
+		function initAnimation(method) {
+			display = null;
+			sender = null;
+			receiver = null;
+			for (var t in runningTimers)
+				runningTimers[t].stop();
+
+			var senderN = contr.getSenderN();
+			var receiverN = contr.getReceiverN();
+
+
+			switch (method) {
+				case 'gbn':
+					display = new Display(senderN, receiverN, true);
+					sender = new SenderGBN(senderN);
+					receiver = new ReceiverGBN(receiverN);
+					document.getElementById('receiverN').value = "1";
+					document.getElementById('receiverN').disabled = true;
+					break;
+			}
+
+			sender.partner = receiver;
+			receiver.partner = sender;
+
+			contr.updateEndToEndDelay();
+			contr.setTimeout();
+
+		}
+
+
+		/**
+ * Constructor for the Display object, responsible for visualizing the 
+ * sliding window simulation.
+ * 
+ * @param {number} windowNsender Initial sender window size.
+ * @param {number} windowNreceiver Initial receiver window size.
+ * @param {boolean} hasWindowReceiver Flag to display the receiver window visually.
+ */
+
+function Display(windowNsender, windowNreceiver, hasWindowReceiver) {
+    
+    // --- Configuration Constants ---
+    // --- >> MODIFIED VALUES << ---
+    const PKG_WIDTH = 60;          // Increased from 40 to 60
+    const PKG_HEIGHT = 45;         // Increased from 30 to 45
+    const WINDOW_HEIGHT = 50;      // Increased from 35 to 50
+    const WINDOW_TIMER_SIZE = 60;  // Increased from 50 to 60
+    const PKG_CANVAS_SIZE = 40;    // Increased from 30 to 40
+    const PKG_GAP = 15;            // Increased from 10 to 15
+    const PKG_TOTAL_SPACING = PKG_WIDTH + PKG_GAP; // Total horizontal space per packet (NOW: 60 + 15 = 75px)
+    const WINDOW_PADDING = 4;      // Padding inside the window visualization divs
+    const BASE_OFFSET_X = 10;      // Initial horizontal offset for the first packet
+    const FINE_TUNE_OFFSET = -2;   // Small adjustment for window positioning (may need tweaking)
+    const SENDER_Y = 10;           // Top position for sender elements
+    const RECEIVER_Y = 360;        // Top position for receiver elements
+    const SENDER_WINDOW_Y = 8;     // Top position for the sender window visual
+    const RECEIVER_WINDOW_Y = 358; // Top position for the receiver window visual
+    
+
+    // --- Initialization ---
+    this.paper = $('#root'); // Main container jQuery object
+    this.paper.children(':not(div.desc)').remove(); // Clear previous simulation elements
+    this.paper.css({ 'left': '0px' }); // Reset horizontal scroll
+
+    this.windowNsender = windowNsender;     // Current sender window size N
+    this.windowNreceiver = windowNreceiver; // Current receiver window size N
+    this.windowOffset = 5; // Offset used in sequence number calculations? (Legacy or specific purpose)
+    this.seqnumToPkg = {}; // Map: sequence number -> {sender: jQueryObj, receiver: jQueryObj}
+    this.windowSender;     // jQuery object for the sender window visual
+    this.windowReceiver;   // jQuery object for the receiver window visual
+    this.xOffset = 0;      // Current horizontal scroll offset of the 'paper' container
+    this.nextFreeSeqNum = 1 - this.windowOffset; // Sequence number for the next packet to create
+    this.nextFreePkgIndex = 0; // Horizontal index for the next packet element
+    this.nextSeqNumToRemove = 0; // Lowest sequence number potentially scrolled off-screen
+    this.windowTimer;      // jQuery object for the GBN-style window timer canvas
+    this.packetsAlive = 0; // Counter for packets currently animating (in transit)
+
+    // --- Methods ---
+
+    /** Decrements the count of animating packets and checks if simulation is done. */
+    this.packetsAliveDec = function (seqnum) {
+        this.packetsAlive--;
+        //console.log('Packets alive:', this.packetsAlive, 'Seqnum finished:', seqnum);
+        this.alive();
+    };
+
+    /** Checks if all packets/timers are finished, signaling simulation end. */
+    this.alive = function () {
+        // Check if no packets animating, no individual packet timers running, and window timer not started
+        if (this.packetsAlive === 0 && Object.keys(this.pkgTimers).length === 0 && !this.windowTimerStarted) {
+            // Assuming 'contr' is a global controller object
+            if (typeof contr !== 'undefined' && typeof contr.allPacketsReceived === 'function') {
+                contr.allPacketsReceived();
+            } else {
+                console.warn("Controller 'contr' or 'allPacketsReceived' method not found.");
+            }
+        }
+    };
+
+    /** Creates or updates the visual representation of the sender's window. */
+    this.setNsender = function (windowNsender, base) {
+        this.windowNsender = windowNsender;
+
+        // Calculate window position and width using constants
+        const x = BASE_OFFSET_X + PKG_TOTAL_SPACING * (base + this.windowOffset - 1) + FINE_TUNE_OFFSET;
+        const widthSender = WINDOW_PADDING + this.windowNsender * PKG_WIDTH + Math.max(0, this.windowNsender - 1) * PKG_GAP;
+
+        if (typeof this.windowSender === 'undefined') {
+            // --- First time creation ---
+            this.windowSender = $('<div> </div>').css({
+                left: x + 'px',
+                top: SENDER_WINDOW_Y + 'px',
+                width: widthSender + 'px',
+                height: WINDOW_HEIGHT + 'px' // Use updated WINDOW_HEIGHT
+            }).attr('class', 'window').appendTo(this.paper);
+
+            // Create Window timer canvas (typically for GBN) if receiver window isn't shown
+            if (!hasWindowReceiver) {
+                // Create with updated WINDOW_TIMER_SIZE and adjust vertical position based on new WINDOW_HEIGHT
+                this.windowTimer = $(`<canvas height="${WINDOW_TIMER_SIZE}" width="${WINDOW_TIMER_SIZE}"> </canvas>`).css({
+                    left: x + 'px', // Position timer with window
+                    top: (SENDER_WINDOW_Y - WINDOW_TIMER_SIZE / 2 + WINDOW_HEIGHT / 2) + 'px' // Recalculate vertical center
+                }).attr('class', 'window-timer').appendTo(this.paper);
+            }
+        } else {
+            // --- Update existing window ---
+            this.windowSender.css('width', widthSender + 'px');
+             // Also update height in case it changes dynamically elsewhere (unlikely here, but good practice)
+            this.windowSender.css('height', WINDOW_HEIGHT + 'px');
+        }
+    };
+
+    /** Creates or updates the visual representation of the receiver's window. */
+    this.setNreceiver = function (windowNreceiver, base) {
+        this.windowNreceiver = windowNreceiver;
+
+        // Calculate window position and width using constants
+        const x = BASE_OFFSET_X + PKG_TOTAL_SPACING * (base + this.windowOffset - 1) + FINE_TUNE_OFFSET;
+        const widthReceiver = WINDOW_PADDING + this.windowNreceiver * PKG_WIDTH + Math.max(0, this.windowNreceiver - 1) * PKG_GAP;
+
+        if (typeof this.windowReceiver === 'undefined') {
+            // --- First time creation ---
+
+            // Create Window timer only if GBN style AND it wasn't created by setNsender
+             if (!hasWindowReceiver && !this.windowTimer) {
+                 console.warn("Creating window timer in setNreceiver - unusual for GBN.");
+                 // Use updated size/positioning if created here
+                 this.windowTimer = $(`<canvas height="${WINDOW_TIMER_SIZE}" width="${WINDOW_TIMER_SIZE}"> </canvas>`).css({
+                     left: x + 'px', 
+                     top: (SENDER_WINDOW_Y - WINDOW_TIMER_SIZE / 2 + WINDOW_HEIGHT / 2) + 'px' 
+                 }).attr('class', 'window-timer').appendTo(this.paper);
+             }
+
+            // Create receiver window visual only if requested
+            if (hasWindowReceiver) {
+                this.windowReceiver = $('<div> </div>').css({
+                    left: x + 'px',
+                    top: RECEIVER_WINDOW_Y + 'px',
+                    width: widthReceiver + 'px',
+                    height: WINDOW_HEIGHT + 'px' // Use updated WINDOW_HEIGHT
+                }).attr('class', 'window').appendTo(this.paper);
+            }
+        } else {
+            // --- Update existing window ---
+             if (hasWindowReceiver && this.windowReceiver) { // Check if it exists before updating
+                this.windowReceiver.css('width', widthReceiver + 'px');
+                 // Also update height
+                this.windowReceiver.css('height', WINDOW_HEIGHT + 'px');
+            }
+        }
+    };
+
+    /** Creates the visual elements (sender/receiver placeholders) for one packet. */
+    this.createPackets = function () {
+        // Check for potential 'numberUI' global variable dependency
+        let displaySeqNum = '';
+        if (typeof numberUI !== 'undefined') {
+             // Use logical AND && instead of bitwise &
+            displaySeqNum = (this.nextFreeSeqNum > 0 && this.nextFreeSeqNum <= numberUI) ? (this.nextFreeSeqNum) : (''); // Display actual seq num
+        } else {
+            // Fallback if numberUI is not defined
+             displaySeqNum = (this.nextFreeSeqNum > 0) ? (this.nextFreeSeqNum) : ('');
+        }
+        
+        const currentX = BASE_OFFSET_X + this.nextFreePkgIndex * PKG_TOTAL_SPACING;
+
+        // Create sender-side packet visual (div with canvas and sequence number)
+        const senderDiv = $(`
+            <div>
+                <canvas width="${PKG_CANVAS_SIZE}" height="${PKG_CANVAS_SIZE}"></canvas>
+                <center><b>${displaySeqNum}</b></center>
+            </div>
+        `).css({
+            left: currentX + 'px',
+            top: SENDER_Y + 'px',
+            width: PKG_WIDTH + 'px', // Set width explicitly
+            height: PKG_HEIGHT + 'px' // **Set height explicitly using the constant**
+        }).attr('class', 'pkg')
+          .data('index', this.nextFreePkgIndex) // Store index for positioning calculations
+          .appendTo(this.paper);
+
+        // Create receiver-side packet placeholder visual (div with sequence number)
+        const receiverDiv = $(`
+            <div>
+                <center><b>${displaySeqNum}</b></center>
+            </div>
+        `).css({
+            left: currentX + 'px',
+            top: RECEIVER_Y + 'px',
+            width: PKG_WIDTH + 'px', // Set width explicitly
+            height: PKG_HEIGHT + 'px' // **Set height explicitly using the constant**
+        }).attr('class', 'pkg empty') // Starts as an empty slot
+          .data('index', this.nextFreePkgIndex)
+          .appendTo(this.paper);
+
+        // Store references in the map
+        this.seqnumToPkg[this.nextFreeSeqNum] = { 'sender': senderDiv, 'receiver': receiverDiv };
+
+        // Increment for the next packet
+        this.nextFreeSeqNum++;
+        this.nextFreePkgIndex++;
+    };
+
+    // --- Initial Setup Execution ---
+    // Create initial batch of packet placeholders
+    for (let i = 0; i < 30; i++) { // Create 30 initial slots
+        this.createPackets();
+    }
+    // Draw the initial windows based on constructor parameters
+    this.setNsender(this.windowNsender, 1); // Draw sender window starting at base 1
+    this.setNreceiver(this.windowNreceiver, 1); // Draw receiver window starting at base 1
+
+    // --- State Change Methods ---
+
+    /** Marks a sender packet as confirmed (acknowledged). */
+    this.confirmSender = function (seqnum) {
+        if (this.seqnumToPkg[seqnum]) {
+             $(this.seqnumToPkg[seqnum].sender).attr('class', 'pkg confirmed');
+        }
+    };
+
+    /** Marks a receiver placeholder as ready (data acknowledged). */
+    this.confirmReceiver = function (seqnum) {
+         if (this.seqnumToPkg[seqnum]) {
+            $(this.seqnumToPkg[seqnum].receiver).attr('class', 'pkg'); // Removes 'empty' or 'delivered'
+         }
+    };
+
+    /** Marks a receiver packet as delivered to the application layer. */
+    this.deliverPkg = function (seqnum) {
+         if (this.seqnumToPkg[seqnum]) {
+            $(this.seqnumToPkg[seqnum].receiver).attr('class', 'pkg delivered');
+         }
+    };
+
+    // --- Window Sliding and Scrolling ---
+    let xOffsetLast = this.xOffset; // Track previous offset for scrolling condition
+
+    /** Slides the sender window and potentially scrolls the view. */
+    this.setSenderBase = function (count, newBase) {
+        if (count === 0 || !this.seqnumToPkg[newBase]) return; // No move or target packet doesn't exist
+
+        // Update total horizontal offset
+        this.xOffset += count * PKG_TOTAL_SPACING; // Uses updated PKG_TOTAL_SPACING
+
+        // Create new packet placeholders at the tail end as the view expands
+        for (let i = 0; i < count; i++) {
+            this.createPackets();
+        }
+
+        // Calculate the new horizontal pixel position for the sender window
+        const newX = BASE_OFFSET_X + this.seqnumToPkg[newBase].sender.data('index') * PKG_TOTAL_SPACING + FINE_TUNE_OFFSET;
+
+        // Animate the sender window smoothly to the new position
+        if (this.windowSender) {
+            this.windowSender.stop(true).animate({ 'left': newX + 'px' }, 100);
+        }
+        
+        // Animate the window timer canvas along with the window if it exists
+        if (this.windowTimer) {
+            this.windowTimer.stop(true).animate({ 'left': newX + 'px' }, 100);
+        }
+
+        // Check if the 'paper' container needs to be scrolled left
+        const scrollThreshold = 750; // Viewport width threshold (adjust as needed)
+        let shouldScroll = false;
+        if (typeof typewriter !== 'undefined' && !typewriter) { // Check if typewriter mode is off
+            shouldScroll = true;
+        } else if (this.windowSender) { // Check if right edge goes beyond threshold
+             // Use windowSender.width() which reflects the calculation using new PKG_WIDTH
+             shouldScroll = (newX + this.windowSender.width() - xOffsetLast >= scrollThreshold);
+        } else {
+             // Estimate if window not ready (less accurate but fallback)
+             shouldScroll = (newX + PKG_TOTAL_SPACING * this.windowNsender - xOffsetLast >= scrollThreshold); 
+        }
+
+
+        if (shouldScroll) {
+            const displayObj = this; // Use 'displayObj' or similar distinct name for 'this' in callback
+            this.paper.stop(true).animate({
+                left: -this.xOffset + "px" // Move container left
+            }, 400, function () { // Animation complete callback
+                // --- Cleanup Off-Screen Elements ---
+                for (let i = displayObj.nextSeqNumToRemove; i < displayObj.nextFreeSeqNum; i++) {
+                    const packetElements = displayObj.seqnumToPkg[i];
+                    if (packetElements && packetElements.sender) {
+                        // Check if the element's left edge is completely off-screen
+                        // Uses updated PKG_TOTAL_SPACING for threshold
+                        if (packetElements.sender.offset().left < -PKG_TOTAL_SPACING) { 
+                            // Remove both sender and receiver elements from DOM
+                            packetElements.sender.remove();
+                            packetElements.receiver.remove();
+                            // Delete the entry from the map
+                            delete displayObj.seqnumToPkg[i];
+                            // Increment the sequence number tracking the removal front
+                            displayObj.nextSeqNumToRemove++;
+                            //console.log('Removed packet elements for seqnum:', i);
+                        } else {
+                            // Stop checking once we find a packet still on-screen
+                            break; 
+                        }
+                    } else if (i >= displayObj.nextSeqNumToRemove) {
+                         // Optional: handle missing elements during cleanup
+                         // displayObj.nextSeqNumToRemove = i + 1; 
+                    }
+                }
+            });
+            xOffsetLast = this.xOffset; // Update the last offset after initiating scroll
+        }
+    };
+
+    /** Slides the receiver window (if displayed). */
+    this.setReceiverBase = function (count, newBase) {
+        if (count === 0 || !hasWindowReceiver || !this.windowReceiver || !this.seqnumToPkg[newBase]) {
+            return; // No move needed, or window/target packet doesn't exist
+        }
+
+        // Calculate the new horizontal pixel position for the receiver window
+        const newX = BASE_OFFSET_X + this.seqnumToPkg[newBase].sender.data('index') * PKG_TOTAL_SPACING + FINE_TUNE_OFFSET;
+        
+        // Animate the receiver window smoothly
+        this.windowReceiver.stop(true).animate({ left: newX + 'px' }, 200);
+    };
+
+    /** Animates a packet/ACK/NACK between sender and receiver areas. */
+    this.send = function (toReceiver, pkg, value) { // 'value' parameter seems unused
+        const seqnum = pkg.seqnum;
+        const isNack = pkg.data === 'NACK'; // Check if it's a NACK
+        
+        // Assumed global variables (ensure they are defined elsewhere)
+        const endToEndDelay = typeof window.endToEndDelay !== 'undefined' ? window.endToEndDelay : 1000; // Default 1s
+        const timeBetweenPkgs = (typeof contr !== 'undefined' && contr.timeBetweenPkgs) ? contr.timeBetweenPkgs : 100; // Default 100ms
+        const ackTT = typeof window.ackTT !== 'undefined' ? window.ackTT : 50; // Default 50ms
+        
+        let originElement, startY, cssClass, initialMoveTargetY, finalTargetY, initialMoveTime;
+
+        if (!this.seqnumToPkg[seqnum]) {
+            console.warn(`Cannot send seqnum ${seqnum}, elements not found.`);
+            return;
+        }
+
+        if (toReceiver) { // Data packet
+            originElement = this.seqnumToPkg[seqnum].sender;
+            startY = SENDER_Y;
+            cssClass = 'pkg';
+            initialMoveTargetY = SENDER_Y + 30; // Short downward move (keep relative move distance)
+            finalTargetY = RECEIVER_Y;
+            initialMoveTime = timeBetweenPkgs; // Time based on inter-packet gap
+        } else { // ACK or NACK
+            originElement = this.seqnumToPkg[seqnum].receiver;
+            startY = RECEIVER_Y;
+            cssClass = isNack ? 'pkg nack' : 'pkg ack'; // Different class for NACK
+            initialMoveTargetY = RECEIVER_Y - 30; // Short upward move (keep relative move distance)
+            finalTargetY = SENDER_Y;
+            initialMoveTime = ackTT; // Time based on ACK transmission time
+        }
+        
+        // Clone the origin element for animation
+        // The clone will inherit the new width/height set in createPackets
+        const animatedSquare = $(originElement).clone()
+            .attr('class', cssClass) // Apply appropriate class
+            .appendTo(this.paper)
+            .css({ 
+                top: startY + 'px', 
+                // Width/Height should be inherited from origin via clone if CSS is set correctly
+                // width: $(originElement).width() + 'px', // Usually not needed if origin CSS is correct
+                // height: $(originElement).height() + 'px',// Usually not needed if origin CSS is correct
+                position: 'absolute' // Ensure it's positioned absolutely for animation
+            });
+            
+        this.packetsAlive++; // Increment count of animating packets
+        const self = this; // Reference to 'this' for callbacks
+
+        // --- Animation Sequence ---
+        animatedSquare
+            // 1. Short initial move (simulates entering channel)
+            .animate({ top: initialMoveTargetY + 'px' }, initialMoveTime, 'linear')
+            // 2. Main travel across the channel
+            .animate({ top: finalTargetY + 'px' }, endToEndDelay, 'linear', function () {
+                // Animation Complete Callback:
+                $(this).remove(); // Remove the animated clone
+                self.packetsAliveDec(seqnum); // Decrement counter and check 'alive' status
+            });
+
+        // --- Click to Simulate Loss ---
+        animatedSquare.on('mousedown', function (e) {
+            e.preventDefault(); // Prevent potential text selection/drag behavior
+            
+            if (typeof pkg.kill === 'function') {
+                pkg.kill(); // Call the packet's kill method if it exists
+            } else {
+                console.warn("Packet object does not have a kill() method.");
+            }
+            
+            self.packetsAliveDec(seqnum); // Decrement counter, packet is "lost"
+
+            $(this).stop(true) // Stop animation immediately
+                   .css({ background: '#ff0000', opacity: 0.7 }) // Visual feedback (red flash)
+                   .delay(150) // Wait briefly
+                   .fadeOut(100, function() { $(this).remove(); }); // Fade out and remove
+                   
+            console.log(`${toReceiver ? 'Data' : (isNack ? 'NACK' : 'ACK')} ${seqnum} killed (simulated loss).`);
+        });
+    };
+
+    // --- Timer Management ---
+    this.pkgTimers = {}; // Object to store individual packet TimerCircle instances
+
+    /** Starts the timeout timer visual for a specific sender packet. */
+    this.startPkgTimer = function (seqnum, time) {
+        if (!this.seqnumToPkg[seqnum] || !this.seqnumToPkg[seqnum].sender) {
+            // console.warn(`Cannot start timer for seqnum ${seqnum}, sender element not found.`);
+            return; // Packet scrolled off or doesn't exist
+        }
+
+        const canvas = this.seqnumToPkg[seqnum].sender.children('canvas');
+        if (canvas.length === 0) {
+             console.warn(`Canvas not found for seqnum ${seqnum}.`);
+             return;
+        }
+        
+        let timerInstance = canvas.data('timer');
+        if (!timerInstance) {
+            // Create TimerCircle instance using constant canvas size (PKG_CANVAS_SIZE)
+            timerInstance = new TimerCircle(PKG_CANVAS_SIZE, canvas, 'pkg');
+            canvas.data('timer', timerInstance); // Store it
+        }
+
+        // Delay start slightly (e.g., based on packet spacing time) - adjust if needed
+        const startDelay = (typeof contr !== 'undefined' && contr.timeBetweenPkgs) ? contr.timeBetweenPkgs : 50;
+        setTimeout(() => { 
+            if (canvas.data('timer')) { // Check if still exists before starting
+                 canvas.data('timer').start(time); 
+            }
+        }, startDelay); 
+    };
+
+    /** Stops and clears the timeout timer visual for a specific sender packet. */
+    this.stopPkgTimer = function (seqnum) {
+        if (!this.seqnumToPkg[seqnum] || !this.seqnumToPkg[seqnum].sender) {
+            return; // Packet scrolled off or doesn't exist
+        }
+
+        const canvas = this.seqnumToPkg[seqnum].sender.children('canvas');
+        const timerInstance = canvas.data('timer');
+        
+        if (timerInstance) {
+            timerInstance.stop();
+            // Optional: remove timer data to allow recreation if needed later
+            // canvas.removeData('timer'); 
+        }
+        // No need to delete from this.pkgTimers here as it wasn't added
+        
+        this.alive(); // Check if simulation might be done
+    };
+
+    // --- Window Timer (Go-Back-N Style) ---
+    this.windowTimerStarted = false; // Flag for the main GBN timer
+
+    /** Starts the main window timer visual. */
+    this.startWindowTimer = function (time) {
+        if (!this.windowTimer) {
+            console.warn("Attempted to start window timer, but canvas element doesn't exist.");
+            return;
+        }
+        
+        let timerInstance = this.windowTimer.data('timer');
+        if (!timerInstance) {
+            // Create TimerCircle instance for the window timer canvas using updated WINDOW_TIMER_SIZE
+            timerInstance = new TimerCircle(WINDOW_TIMER_SIZE, this.windowTimer, 'window');
+            this.windowTimer.data('timer', timerInstance);
+        }
+
+        timerInstance.start(time);
+        this.windowTimerStarted = true;
+    };
+
+    /** Restarts the main window timer. */
+    this.restartWindowTimer = function (time) {
+        if (!this.windowTimer) return; 
+        
+        const timerInstance = this.windowTimer.data('timer');
+        if (timerInstance) {
+            timerInstance.stop(); // Stop the current timer first
+        }
+        
+        this.startWindowTimer(time); // Start a new one
+    };
+
+    /** Stops the main window timer visual. */
+    this.stopWindowTimer = function () {
+         if (!this.windowTimer) return; 
+
+        const timerInstance = this.windowTimer.data('timer');
+        if (timerInstance) {
+            timerInstance.stop();
+        }
+        this.windowTimerStarted = false; // Update flag
+
+        this.alive(); // Check if simulation might be done
+    };
+
+
+    /**
+     * Inner Helper Class: TimerCircle (Implementation uses requestAnimationFrame)
+     * Creates and manages the animation of a circular countdown timer on a canvas.
+     * @param {number} size - The width and height of the canvas.
+     * @param {jQuery} canvasElement - The jQuery object representing the canvas.
+     * @param {'window'|'pkg'} type - The style of timer ('window' = outline, 'pkg' = filled).
+     */
+    function TimerCircle(size, canvasElement, type) {
+        const context = canvasElement[0].getContext('2d');
+        let animationFrameId = null; // Store requestAnimationFrame ID
+        let startTime = 0;
+        let duration = 0;
+        let isRunning = false;
+
+        if (type !== 'window' && type !== 'pkg') {
+            throw new Error(`TimerCircle type "${type}" is not defined`);
+        }
+
+        const draw = (percent) => {
+            context.clearRect(0, 0, size, size); // Clear canvas
+            if (percent <= 0) return;
+
+            const value = percent / 100; // Normalize percent to 0-1
+            const startAngle = -0.5 * Math.PI; // Start at 12 o'clock
+            const endAngle = startAngle + (2 * Math.PI * value);
+
+            context.save();
+            context.beginPath();
+
+            if (type === 'window') {
+                // Adjust line width relative to the (potentially larger) timer size
+                const lineWidth = Math.max(2, size * 0.15); 
+                const radius = size / 2 - lineWidth / 2;
+                const centerX = size / 2;
+                const centerY = size / 2;
+                context.arc(centerX, centerY, radius, startAngle, endAngle, false);
+                context.lineWidth = lineWidth;
+                context.strokeStyle = 'pink'; // Magenta
+                context.lineCap = 'round'; // Use round caps
+                context.stroke();
+            } else { // 'pkg' type (filled) - PKG_CANVAS_SIZE is used here
+                const radius = size / 2;
+                const centerX = size / 2;
+                const centerY = size / 2;
+                context.moveTo(centerX, centerY); // Start from center
+                context.arc(centerX, centerY, radius, startAngle, endAngle, false);
+                context.closePath(); // Close path back to center
+                context.fillStyle = 'red'; // Magenta
+                context.fill();
+            }
+            context.restore();
+        };
+        
+        const step = (timestamp) => {
+             if (!isRunning) return; // Stop if stop() was called
+
+             if (!startTime) {
+                 startTime = timestamp; // Record start time on first frame
+             }
+             const elapsed = timestamp - startTime;
+             const remaining = Math.max(0, duration - elapsed);
+             const percent = (remaining / duration) * 100;
+
+             draw(percent);
+
+             if (remaining > 0) {
+                 animationFrameId = requestAnimationFrame(step); // Continue animation
+             } else {
+                 // Animation finished
+                 draw(0); // Ensure final state is cleared/empty
+                 isRunning = false; 
+                 startTime = 0; 
+                 animationFrameId = null; // Clear ID
+             }
+        };
+
+        this.start = function (time) {
+             if (isRunning) { 
+                 this.stop(); 
+             }
+             duration = time; 
+             startTime = 0; 
+             isRunning = true;
+             // Ensure drawing starts immediately even if RAF has slight delay
+             draw(100); 
+             animationFrameId = requestAnimationFrame(step); 
+             return this;
+        };
+
+        this.stop = function () {
+             if (animationFrameId) {
+                 cancelAnimationFrame(animationFrameId); 
+             }
+             isRunning = false;
+             startTime = 0; 
+             animationFrameId = null;
+             context.clearRect(0, 0, size, size); 
+             return this;
+        };
+
+        // Basic pause/resume (might have timing drift on resume)
+        let pausedTime = 0;
+        this.pause = function() {
+            if (isRunning) {
+                cancelAnimationFrame(animationFrameId);
+                pausedTime = performance.now();
+                isRunning = false; 
+                animationFrameId = null;
+            }
+             return this;
+        }
+        this.resume = function() {
+             if (!isRunning && pausedTime > 0 && duration > 0) {
+                 const pauseDuration = performance.now() - pausedTime;
+                 startTime += pauseDuration; // Adjust start time
+                 isRunning = true;
+                 pausedTime = 0;
+                 animationFrameId = requestAnimationFrame(step);
+             }
+              return this;
+        }
+    } // End of TimerCircle constructor
+
+} // End of Display constructor
+
+// --- Reminder ---
+// Ensure your CSS rules for `.pkg` and potentially `.window` are adjusted 
+// to handle the new dimensions (W:40, H:50) correctly for alignment and appearance.
+
+	</script>
+</head>
+
+<body onload="init();" class="mobile dark-mode">
+	<header>
+		<h1 class="headingName" style="font-size: 24px; color: #ff00ff;">Go-back-N ARQ Protocol</h1>
+	</header>
+	<div><h1 class="headingName" style="font-size: 16px; color: #00ff48; text-align: center;">Click a packet to kill it. Click an ACK to kill the acknowledgment.</h1></div>
+		
+
+	<div class="container">
+		<!-- Sidebar with Configuration and Legend -->
+		<aside id="sidebar">
+			<!-- Tab Navigation -->
+			<div class="tab-buttons">
+				<button class="tab-button active" data-tab="config-tab">Configuration</button>
+				<button class="tab-button " data-tab="legend-tab">Legend</button>
+			</div>
+
+			<!-- Configuration Tab -->
+			<div id="config-tab" class="tab-content active">
+				<form class="config">
+					<div class="form-item">
+
+
+
+						<h5>
+								Speed:
+
+							</label></h5>
+
+						<h5><label for="" id="speedwarning" hidden>
+								<div class="tooltip">
+									<span class="tooltiptext">The speed control option can be only used if the values of IU transmission,
+										Ack transmission and propagation delay are between
+										1 nanoseconds and 1000 seconds.</span>
+								</div>
+								Can not be used in this case!
+
+							</label></h5>
+
+						<h5><label for="" id="speedfault">
+								<div class="tooltip">
+									<span class="tooltiptext">After selecting the speed control option, it is also possible to change the
+										speed mode. </span>
+								</div>
+								<input type="checkbox" [disabled]="false" id="autospeed" onchange="contr.autoSpeedControl();">
+								<select id="PDspeed" [disabled]="false" onchange="contr.setPDsimulationSpeed(this);">
+									<option value="900">Very slow</option>
+									<option value="500">Slow</option>
+									<option value="0" selected="selected">Normal</option>
+									<option value="-500">Fast</option>
+									<option value="-900">Very fast</option>
+								</select>
+							</label></h5>
+
+
+						<h5><label for="">
+								<div class="tooltip">
+									<span class="tooltiptext">Start, stop, reload, and log</span>
+								</div>
+
+								<input type="button" id="start" onclick="contr.startStop();" value="Start" />
+								<input type="button" id="reload" onclick="window.location.reload();" value="Reload" />
+								<input type="button" onclick="logger()" value="Log" />
+
+							</label></h5>
+					</div>
+
+					<div class="form-item">
+
+
+						<div class="dropdown" id="dropdownSW">
+							<h3 >
+								
+								Sender Window
+							</h3>
+							
+						</div>
+						<input type="number" [disabled]="false" value="5" min="1" max="10" step="1" id="senderN"
+							onchange="contr.setSenderN(this);" />
+
+
+						<div class="dropdown" id="dropdownRW">
+							<h3>
+								Receiver Window
+							</h3>
+						</div>
+						<input [disabled]="false" type="number" value="5" min="1" max="10" step="1" id="receiverN"
+							onchange="contr.setReceiverN(this);" />
+
+
+						<div class="dropdown" id="dropdownTO">
+							<h3>
+								Timeout
+							</h3>
+							<div class="dropdown-content">
+							</div>
+						</div>
+
+						<input type="number" value="60" min="2000" step="any" id="timeout" onchange="contr.setTimeout(this)" /><span
+							id="unit">
+							<select class="units" id="unitTimeout" onchange="contr.setTimeout(this);">
+								<option value="1000">s</option>
+								<option value="1" selected="selected">ms</option>
+							</select>
+					</div>
+<!-- display none -->
+					<div class="form-item" style="display: none;">
+						<h3><label for="Link Parameters">
+								<div class="tooltip">
+									<span class="tooltiptext">This section is related to the parameters of the link between the sender and
+										the receiver.</span>
+								</div>
+								Link Parameters:
+							</label>
+						</h3>
+
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext">Enter the capacity of the link.</span>
+							</div>
+							Capacity
+						</h3>
+						<input type="number" value="1" min="0" step="any" id="Capacity" onchange="contr.setCapacity(this);" /><span
+							id="unit">
+							<select class="units" id="unitc" onchange="contr.setCapacity(this);">
+								<option value="1">bit/s</option>
+								<option value="1000" selected="selected">kbit/s</option>
+								<option value="1000000">Mbit/s</option>
+								<option value="1000000000">Gbit/s</option>
+							</select>
+						</span>
+
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext">Enter the length of the link.</span>
+							</div>
+							Length
+						</h3>
+						<input type="number" value="1" id="Length" min="0" step="any" onchange="contr.setLength(this);" /><span
+							id="unit">
+							<select class="units" id="unitl" onchange="contr.setLength(this);">
+								<option value="1">m</option>
+								<option value="1000" selected="selected">km</option>
+							</select>
+						</span>
+
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext">Enter the propagation speed.</span>
+							</div>
+							Propagation speed
+						</h3>
+						<input type="number" value="200000" min="0" step="any" id="Propagation"
+							onchange="contr.setPropagation(this);" /><span id="unit">
+							<select class="units" id="unitp" onchange="contr.setPropagation(this);">
+								<option value="1">m/s</option>
+								<option value="1000" selected="selected">km/s</option>
+							</select>
+						</span>
+					</div>
+
+					<div class="form-item">
+						
+						<h3>
+							Total Packets
+						</h3>
+						<input type="number" value="10" min="0" step="any" id="DataSize" onchange="contr.setDataSize(this);" /><span
+							id="unit">
+							<select class="units" id="unitd" onchange="contr.setDataSize(this);">
+								<option value="1">bit</option>
+								<option value="1000" selected="selected">kbit</option>
+							</select>
+						</span>
+						<!-- display none -->
+						<div style="display: none;">
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext">Enter the size of each information unit.</span>
+							</div>
+							IU Size
+						</h3>
+						<input type="number" value="500" min="0" step="1" id="UnitSize" onchange="contr.setUnitSize(this);" /><span
+							id="unit">
+							<select class="units" id="unitu" onchange="contr.setUnitSize(this);">
+								<option value="1" selected="selected">bit</option>
+								<option value="1000">kbit</option>
+							</select>
+						</span>
+
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext">Enter the size of each ack unit.</span>
+							</div>
+							Ack Size
+						</h3>
+						<input type="number" value="20" min="0" step="1" id="AckSize" onchange="contr.setAckSize(this);" /><span
+							id="unit">
+							<select class="units" id="unita" onchange="contr.setAckSize(this);">
+								<option value="1" selected="selected">bit</option>
+								<option value="1000">kbit</option>
+							</select>
+						</span>
+						</div>
+					</div>
+
+					<!-- display none -->
+					<div class="form-item" style="display: none;">
+						<h3><label for="Data Parameters">
+								<div class="tooltip">
+									<span class="tooltiptext1">These parameters are calculated automaticly according to the inputs!</span>
+								</div>
+								Calculated Parameters:
+							</label></h3>
+
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext1">The transmission time of each information unit is calculated according to the
+									IU size and the link capacity.</span>
+							</div>
+							IU Transmission Time
+						</h3>
+						<input type="number" value="500" step="any" id="TransmissionTime" disabled="disabled" /><span id="Consunit">
+							<select class="unitdisabled" disabled id="unitTT">
+								<option value="1000000">μs</option>
+								<option value="1000" selected="selected">ms</option>
+								<option value="1">s</option>
+							</select>
+						</span>
+
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext1">The transmission time of each ack is calculated according to the ack size and
+									the link capacity.</span>
+							</div>
+							ACK Transmission Time
+						</h3>
+						<input type="number" value="20" step="any" id="AckTT" disabled="disabled" /><span id="Consunit">
+							<select class="unitdisabled" disabled id="unitAT">
+								<option value="1000000">μs</option>
+								<option value="1000" selected="selected">ms</option>
+								<option value="1">s</option>
+							</select>
+						</span>
+
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext1">The propagation delay is calculated according to the link length and the
+									propagation speed.</span>
+							</div>
+							Propagation delay
+						</h3>
+						<input type="number" value="5" id="endToEndDelay2" disabled="disabled" /><span id="Consunit">
+							<select class="unitdisabled" disabled id="unitPD">
+								<option value="1000000" selected="selected">μs</option>
+								<option value="1000">ms</option>
+								<option value="1">s</option>
+							</select>
+						</span>
+					</div>
+
+					<!-- display none -->
+					<div class="form-item" style="display: none;">
+						<h3><label for="Data Parameters">
+								<div class="tooltip">
+									<span class="tooltiptext1">These parameters are calculated automaticly according to the inputs!</span>
+								</div>
+								Calculated Parameters:
+							</label></h3>
+
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext1">The number of information units is calculated according to the IU size and
+									the total amount of data.</span>
+							</div>
+							Number of IUs
+						</h3>
+						<input type="number" value="20" min="0" step="1" id="NumberUI" disabled="disabled" />
+
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext1">The minimum timeout is suggested here according to the inputs. It depends on
+									the propagation delay and the ack size.</span>
+							</div>
+							Minumun Timeout
+						</h3>
+						<input type="number" value="20.01" min="0" step="any" id="TimeoutMin" disabled="disabled" /><span
+							id="Consunit">
+							<select class="unitdisabled" disabled id="unitMT">
+								<option value="1000000">μs</option>
+								<option value="1000" selected="selected">ms</option>
+								<option value="1">s</option>
+							</select>
+						</span>
+
+						<h3>
+							<div class="tooltip">
+								<span class="tooltiptext1">Total time will be calculated and showed here after the end of the animation.
+									There might be a small variance in the order of microsecond because of the execution of the algorithm
+									itself.</span>
+							</div>
+							Total Time
+						</h3>
+
+						<input type="number" value="" step="any" id="TotalTime" disabled="disabled" /><span id="Consunit">
+							<select class="unitdisabled" disabled id="unitTotal">
+								<option value="1000000">μs</option>
+								<option value="1000" selected="selected">ms</option>
+								<option value="1">s</option>
+							</select>
+						</span>
+					</div>
+				</form>
+			</div>
+
+			<!-- Legend Tab -->
+			<div id="legend-tab" class="tab-content">
+				<div class="legend">
+					<h2>Legend</h2>
+					<table>
+						<tr>
+							<td>
+								<div class="dscPkg empty-legend">No data received yet</div>
+							</td>
+						</tr>
+						<tr>
+							<td>
+								<div class="dscPkg"
+									style="background-color: var(--packet-default-bg); color: black; border-color: var(--packet-default-border);">
+									Buffered data</div>
+							</td>
+						</tr>
+						<tr>
+							<td>
+								<div class="dscPkg"
+									style="background-color: var(--packet-ack-bg); color: var(--packet-ack-text); border-color: var(--packet-ack-border);">
+									ACK</div>
+							</td>
+						</tr>
+						<tr>
+							<td>
+								<div id="nackleg" class="dscPkg"
+									style="background-color: var(--packet-nack-bg); color: var(--packet-nack-text); border-color: var(--packet-nack-border);">
+									NACK</div>
+							</td>
+						</tr>
+						<tr>
+							<td>
+								<div class="dscPkg"
+									style="background-color: var(--packet-confirmed-bg); color: var(--packet-confirmed-text); border-color: var(--packet-confirmed-border);">
+									Transmission confirmed</div>
+							</td>
+						</tr>
+						<tr>
+							<td>
+								<div class="dscPkg"
+									style="background-color: var(--packet-delivered-bg); color: var(--packet-delivered-text); border-color: var(--packet-delivered-border);">
+									Data has been delivered to upper network layer</div>
+							</td>
+						</tr>
+					</table>
+
+					<!-- <p>Coded by Johannes Kessler 2012</p>
+					<p>Developed by Reza Mohajer</p>
+					<p>Politecnico di Milano 2020-2021</p> -->
+				</div>
+			</div>
+		</aside>
+
+		<!-- Toggle Button for Sidebar -->
+		<button id="sidebar-toggle" title="Toggle Sidebar">×</button>
+
+		<!-- Main Content with Simulation -->
+		<main id="main-content">
+			<div id="svg" class="simulation">
+				<hr class="lineSender">
+				</hr>
+				<hr class="lineReciever">
+				</hr>
+				<div id="root"></div>
+			</div>
+
+			<div id="log"
+				style="position: relative; overflow: auto; width: 100%; height: 280px; display: block; margin-top: 10px; border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; background: white;">
+				<p id="myLog">Log: </p>
+			</div>
+		</main>
+	</div>
+</body>
+
+</html>

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go-Back-N Protocol Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a192f 0%, #0d2440 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .network-background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(circle, rgba(100, 255, 218, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: 0.3;
+            z-index: 0;
+        }
+
+        .container {
+            text-align: center;
+            color: #64ffda;
+            transition: transform 0.3s ease;
+            position: relative;
+            z-index: 1;
+            padding: 2rem;
+            border-radius: 20px;
+            background-color: rgba(10, 25, 47, 0.7);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(8px);
+        }
+
+        .container:hover {
+            transform: scale(1.02);
+            box-shadow: 0 12px 40px rgba(100, 255, 218, 0.15);
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, #64ffda, #20e3b2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(100, 255, 218, 0.3);
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: #8892b0;
+            margin-bottom: 3rem;
+            letter-spacing: 1px;
+        }
+
+        .animation-area {
+            position: relative;
+            width: 700px;
+            height: 350px;
+            margin: 0 auto;
+        }
+
+        .sender,
+        .receiver {
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.3rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        .sender {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #172a45 0%, #1f3d60 100%);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 15px rgba(100, 255, 218, 0.2);
+        }
+
+        .receiver {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #172a45 0%, #1f3d60 100%);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 15px rgba(100, 255, 218, 0.2);
+        }
+
+        .sender:before,
+        .receiver:before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 25px;
+            background: linear-gradient(45deg, #64ffda, transparent, #64ffda);
+            z-index: -1;
+            opacity: 0.6;
+            animation: borderAnimation 4s linear infinite;
+        }
+
+        @keyframes borderAnimation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .packet {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #0a192f;
+            z-index: 3;
+            opacity: 0;
+            transform-origin: center;
+        }
+
+        .packet-0 {
+            background: linear-gradient(135deg, #64ffda 0%, #20e3b2 100%);
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.7);
+            left: 140px;
+            top: 35%;
+        }
+
+        .packet-1 {
+            background: linear-gradient(135deg, #64ffda 0%, #20e3b2 100%);
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.7);
+            left: 140px;
+            top: 50%;
+        }
+
+        .packet-2 {
+            background: linear-gradient(135deg, #64ffda 0%, #20e3b2 100%);
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.7);
+            left: 140px;
+            top: 65%;
+        }
+
+        .error-packet {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #ff6464 0%, #ff4040 100%);
+            border-radius: 10px;
+            right: 140px;
+            top: 70%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #0a192f;
+            box-shadow: 0 0 20px rgba(255, 100, 100, 0.7);
+            opacity: 0;
+            z-index: 3;
+        }
+
+        .ack {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #c8ffed 0%, #64ffda 100%);
+            border-radius: 50%;
+            right: 140px;
+            top: 30%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #0a192f;
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.7);
+            opacity: 0;
+            z-index: 3;
+        }
+
+        .click-instruction {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #64ffda;
+            font-size: 1.3rem;
+            opacity: 0;
+            animation: pulse 2s infinite;
+            z-index: 4;
+            background-color: rgba(10, 25, 47, 0.7);
+            padding: 10px 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.3;
+                transform: translateX(-50%) scale(0.95);
+            }
+
+            50% {
+                opacity: 1;
+                transform: translateX(-50%) scale(1.05);
+            }
+
+            100% {
+                opacity: 0.3;
+                transform: translateX(-50%) scale(0.95);
+            }
+        }
+
+        .window {
+            position: absolute;
+            width: 200px;
+            height: 70px;
+            background-color: rgba(100, 255, 218, 0.1);
+            border: 2px dashed #64ffda;
+            border-radius: 15px;
+            top: 15%;
+            left: 120px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px;
+            z-index: 2;
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.2);
+        }
+
+        .window-slot {
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            background-color: rgba(100, 255, 218, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #64ffda;
+            transition: all 0.3s ease;
+        }
+
+        .active-slot {
+            background-color: rgba(100, 255, 218, 0.4);
+            box-shadow: 0 0 10px rgba(100, 255, 218, 0.5);
+        }
+
+        .connection-line {
+            position: absolute;
+            height: 4px;
+            background: linear-gradient(90deg, #172a45, #64ffda, #172a45);
+            top: 50%;
+            left: 130px;
+            right: 130px;
+            border-radius: 2px;
+            z-index: 1;
+            opacity: 0.6;
+            box-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+        }
+
+        .connection-line:before {
+            content: '';
+            position: absolute;
+            height: 100%;
+            width: 20%;
+            background: rgba(100, 255, 218, 0.8);
+            left: 0;
+            animation: movingLight 3s linear infinite;
+            filter: blur(5px);
+        }
+
+        @keyframes movingLight {
+            0% {
+                left: 0;
+                width: 0;
+            }
+
+            50% {
+                width: 20%;
+            }
+
+            100% {
+                left: 100%;
+                width: 0;
+            }
+        }
+
+        .timeout-indicator {
+            position: absolute;
+            width: 120px;
+            height: 40px;
+            background-color: rgba(255, 100, 100, 0.2);
+            border: 2px dashed #ff6464;
+            border-radius: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 15%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #ff6464;
+            font-weight: bold;
+            opacity: 0;
+            z-index: 3;
+        }
+
+        @keyframes rotatePacket {
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+
+            50% {
+                transform: rotate(180deg) scale(1.1);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1);
+            }
+        }
+
+        .title-area {
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .title-line {
+            position: absolute;
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #64ffda, transparent);
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+        .packet-effect {
+            animation: rotatePacket 1s ease infinite;
+        }
+    </style>
+</head>
+
+<body id="frontpage">
+    <div class="network-background"></div>
+    <div class="container">
+        <div class="title-area">
+            <h1>Go-Back-N Protocol</h1>
+            <div class="title-line"></div>
+        </div>
+        <p class="subtitle">Interactive Network Simulation</p>
+
+        <div class="animation-area">
+            <div class="connection-line"></div>
+            <div class="sender">Sender</div>
+            <div class="receiver">Receiver</div>
+
+            <div class="window">
+                <div class="window-slot" id="slot0">0</div>
+                <div class="window-slot" id="slot1">1</div>
+                <div class="window-slot" id="slot2">2</div>
+                <div class="window-slot" id="slot3">3</div>
+            </div>
+
+            <div class="packet packet-0" id="packet0">0</div>
+            <div class="packet packet-1" id="packet1">1</div>
+            <div class="packet packet-2" id="packet2">2</div>
+            <div class="ack" id="ack0">ACK0</div>
+            <div class="ack" id="ack1">ACK1</div>
+            <div class="error-packet" id="errorPacket">X</div>
+            <div class="timeout-indicator" id="timeout">TIMEOUT</div>
+        </div>
+
+        <p class="click-instruction">Click anywhere to launch simulation</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const packet0 = document.getElementById('packet0');
+            const packet1 = document.getElementById('packet1');
+            const packet2 = document.getElementById('packet2');
+            const ack0 = document.getElementById('ack0');
+            const ack1 = document.getElementById('ack1');
+            const errorPacket = document.getElementById('errorPacket');
+            const timeout = document.getElementById('timeout');
+            const clickInstruction = document.querySelector('.click-instruction');
+            const slot0 = document.getElementById('slot0');
+            const slot1 = document.getElementById('slot1');
+            const slot2 = document.getElementById('slot2');
+            const slot3 = document.getElementById('slot3');
+
+            // Helper function for transitions
+            function applyTransition(element, properties, duration) {
+                Object.entries(properties).forEach(([property, value]) => {
+                    element.style.transition = `${property} ${duration}ms ease`;
+                    element.style[property] = value;
+                });
+            }
+
+            // Helper function for highlighting active window slots
+            function highlightSlot(slotId, active) {
+                const slot = document.getElementById(slotId);
+                if (active) {
+                    slot.classList.add('active-slot');
+                } else {
+                    slot.classList.remove('active-slot');
+                }
+            }
+
+            // Show initial instruction
+            setTimeout(() => {
+                clickInstruction.style.opacity = '1';
+                // Start the animation sequence
+                startAnimation();
+            }, 800);
+
+            function startAnimation() {
+                // Reset any previous animation state
+                resetAnimationState();
+
+                // Highlight first window slot
+                setTimeout(() => {
+                    highlightSlot('slot0', true);
+                }, 500);
+
+                // Packet 0 animation
+                setTimeout(() => {
+                    packet0.style.opacity = '1';
+                    packet0.classList.add('packet-effect');
+                    setTimeout(() => {
+                        packet0.classList.remove('packet-effect');
+                        applyTransition(packet0, { left: '520px' }, 1500);
+                    }, 500);
+                }, 1000);
+
+                // ACK 0 animation
+                setTimeout(() => {
+                    ack0.style.opacity = '1';
+                    applyTransition(ack0, { right: '520px' }, 1500);
+                    highlightSlot('slot0', false);
+                    highlightSlot('slot1', true);
+                }, 3000);
+
+                // Packet 0 disappears & Packet 1 appears
+                setTimeout(() => {
+                    packet0.style.opacity = '0';
+                    setTimeout(() => {
+                        packet1.style.opacity = '1';
+                        packet1.classList.add('packet-effect');
+                        setTimeout(() => {
+                            packet1.classList.remove('packet-effect');
+                            applyTransition(packet1, { left: '520px' }, 1500);
+                        }, 500);
+                    }, 500);
+                }, 3500);
+
+                // ACK 0 disappears
+                setTimeout(() => {
+                    ack0.style.opacity = '0';
+                }, 4500);
+
+                // ACK 1 animation
+                setTimeout(() => {
+                    ack1.style.opacity = '1';
+                    applyTransition(ack1, { right: '520px' }, 1500);
+                    highlightSlot('slot1', false);
+                    highlightSlot('slot2', true);
+                }, 5500);
+
+                // Packet 1 disappears & Packet 2 appears (will get lost)
+                setTimeout(() => {
+                    packet1.style.opacity = '0';
+                    setTimeout(() => {
+                        packet2.style.opacity = '1';
+                        packet2.classList.add('packet-effect');
+                        setTimeout(() => {
+                            packet2.classList.remove('packet-effect');
+                            applyTransition(packet2, {
+                                left: '350px',
+                                top: '75%',
+                                opacity: '0.7'
+                            }, 800);
+                        }, 500);
+                    }, 500);
+                }, 6000);
+
+                // ACK 1 disappears
+                setTimeout(() => {
+                    ack1.style.opacity = '0';
+                }, 7000);
+
+                // Packet 2 disappears (gets lost)
+                setTimeout(() => {
+                    applyTransition(packet2, { opacity: '0' }, 500);
+                }, 7300);
+
+                // Timeout appears
+                setTimeout(() => {
+                    timeout.style.opacity = '1';
+                    timeout.style.animation = 'pulse 1s infinite';
+                }, 8000);
+
+                // Error packet appears
+                setTimeout(() => {
+                    errorPacket.style.opacity = '1';
+                    errorPacket.classList.add('packet-effect');
+                    applyTransition(errorPacket, { right: '520px' }, 1500);
+                }, 9000);
+
+                // Reset for next iteration
+                setTimeout(() => {
+                    // Clear timeout animation
+                    timeout.style.animation = '';
+                    timeout.style.opacity = '0';
+
+                    // Clear error packet
+                    errorPacket.style.opacity = '0';
+                    errorPacket.classList.remove('packet-effect');
+
+                    // Clear highlights
+                    highlightSlot('slot0', false);
+                    highlightSlot('slot1', false);
+                    highlightSlot('slot2', false);
+                    highlightSlot('slot3', false);
+
+                    // Restart animation after a brief pause
+                    setTimeout(startAnimation, 1500);
+                }, 11000);
+            }
+
+            function resetAnimationState() {
+                // Reset packets
+                [packet0, packet1, packet2].forEach((packet, index) => {
+                    packet.style.transition = 'none';
+                    packet.style.left = '140px';
+                    packet.style.top = `${35 + index * 15}%`;
+                    packet.style.opacity = '0';
+                    packet.classList.remove('packet-effect');
+                });
+
+                // Reset ACKs
+                [ack0, ack1].forEach((ack) => {
+                    ack.style.transition = 'none';
+                    ack.style.right = '140px';
+                    ack.style.opacity = '0';
+                });
+
+                // Reset error packet
+                errorPacket.style.transition = 'none';
+                errorPacket.style.right = '140px';
+                errorPacket.style.opacity = '0';
+
+                // Reset timeout
+                timeout.style.opacity = '0';
+                timeout.style.animation = '';
+            }
+
+            // Navigate to the main simulation on click
+            document.getElementById('frontpage').addEventListener('click', function () {
+                window.location.href = 'gbn_sr/index.html';
+            });
+
+            // Make container glow on hover
+            const container = document.querySelector('.container');
+            container.addEventListener('mouseenter', function () {
+                this.style.boxShadow = '0 12px 40px rgba(100, 255, 218, 0.25)';
+            });
+
+            container.addEventListener('mouseleave', function () {
+                this.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
+            });
+        });
+    </script>
+</body>
+
+</html>
